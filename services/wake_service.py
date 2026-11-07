@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 # Old fixed lines — still the fallback when the LLM is unavailable.
 WAKE_FALLBACK = (
     'доброе утро ☀️ подъём',
-    'эй, ты там проснулся? 😂',
+    'эй, ты там проснулась? 😂',
     'соня, вставай уже',
     'я всё ещё здесь 🙄',
     'ну всё, последний шанс 😌',
@@ -20,10 +20,10 @@ WAKE_ATTEMPTS = len(WAKE_FALLBACK)
 
 _STAGE_HINT = (
     'Первое, ласковое пробуждение: нежно, тепло, с «доброе утро».',
-    'Он не ответил. Чуть настойчивее, игриво.',
-    'Всё ещё спит. Подразни его, придумай повод встать.',
+    'Она не ответила. Чуть настойчивее, игриво.',
+    'Всё ещё спит. Подразни её, придумай повод встать.',
     'Уже немного обиженно-шутливо, но любя.',
-    'Последний шанс: пообещай что-то приятное, если он встанет прямо сейчас.',
+    'Последний шанс: пообещай что-то приятное, если она встанет прямо сейчас.',
     'Сдаёшься с юмором и тёплым пожеланием хорошего дня.',
 )
 
@@ -40,19 +40,19 @@ async def wake_line(telegram_id: int, character_id: str, attempt: int,
         from services.life_event_service import _character_ingredients
         her_name, _tastes, temperament = _character_ingredients(character_id)
         bits = [
-            f'Ты — {her_name}.' if her_name else 'Ты — его девушка.',
+            f'Ты — {her_name}.' if her_name else 'Ты — её парень.',
             temperament,
-            'Он сам попросил тебя разбудить его утром, и сейчас это время.',
+            'Она сама попросила тебя разбудить её утром, и сейчас это время.',
             _STAGE_HINT[idx],
-            f'Его зовут {name}.' if name and name != 'ты' else '',
-            'Напиши ОДНУ короткую фразу (до 120 знаков), которую ты скажешь ему голосом. '
+            f'Её зовут {name}.' if name and name != 'ты' else '',
+            'Напиши ОДНУ короткую фразу (до 120 знаков), которую ты скажешь ей голосом. '
             'Живо, от первого лица, без эмодзи, без кавычек, не упоминай, что ты ИИ.',
             'Пиши по-английски.' if lang == 'en' else '',
         ]
         from services.llm_provider_service import generate_text
         r = await generate_text([
             {'role': 'system', 'content': ' '.join(b for b in bits if b)},
-            {'role': 'user', 'content': 'Разбуди его сейчас.'},
+            {'role': 'user', 'content': 'Разбуди её сейчас.'},
         ], max_tokens=70, temperature=0.95, purpose='wake')
         text = (getattr(r, 'text', '') or '').strip().strip('"«»').strip()
         if len(text) >= 6:

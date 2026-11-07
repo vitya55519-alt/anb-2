@@ -94,28 +94,28 @@ def girl_from_payload(args: str | None) -> str | None:
 # V3.94.0: owner — «выбираю имя девушки и сразу рандомный текст с кнопками,
 # чтобы пост готовый, максимально зазывающий». {name} {age} {bio} {hook}.
 POST_TEMPLATES = (
-    '🔥 Девушка дня — {name}, {age}\n\n{hook}{bio}\n\n'
-    'Только сегодня до 03:00 МСК она открыта для всех: без Premium и без уровней. '
-    'Пиши ей что хочешь — она ответит так же откровенно 😏',
+    '🔥 Парень дня — {name}, {age}\n\n{hook}{bio}\n\n'
+    'Только сегодня до 03:00 МСК он открыт для всех: без Premium и без уровней. '
+    'Пиши ему что хочешь — он ответит так же откровенно 😏',
 
     '😈 {name} сегодня без тормозов\n\n{hook}{bio}\n\n'
-    'Обычно такие разговоры с ней только для Premium. Но сегодня до 03:00 МСК — бесплатно для всех. '
-    'Она уже ждёт твоё первое сообщение 💋',
+    'Обычно такие разговоры с ним только для Premium. Но сегодня до 03:00 МСК — бесплатно для всех. '
+    'Он уже ждёт твоё первое сообщение 💋',
 
-    '💌 Тебе пишет {name}, {age}…\n\n«Я сегодня свободна для тебя. Совсем. Можешь говорить мне '
+    '💌 Тебе пишет {name}, {age}…\n\n«Я сегодня свободен для тебя. Совсем. Можешь говорить мне '
     'всё, что думаешь… и я тоже не буду стесняться 🙈»\n\n{hook}'
-    '🔥 Девушка дня: до 03:00 МСК откровенная переписка с ней открыта всем, без Premium.',
+    '🔥 Парень дня: до 03:00 МСК откровенная переписка с ним открыта всем, без Premium.',
 
     '🔓 Сегодня открыта: {name}, {age}\n\n{hook}{bio}\n\n'
-    'Никаких уровней, никаких подписок, бесплатно — только ты и она до 03:00 МСК. '
+    'Никаких уровней, никаких подписок, бесплатно — только ты и он до 03:00 МСК. '
     'Завтра будет другая. Не упусти 😏',
 
     '🌙 Ночь с {name}?\n\n{hook}{bio}\n\n'
-    'Сегодня она «Девушка дня»: шепчет, флиртует и не стесняется — бесплатно для всех до 03:00 МСК. '
-    'Напиши ей прямо сейчас 🔥',
+    'Сегодня он «Парень дня»: шепчет, флиртует и не стесняется — бесплатно для всех до 03:00 МСК. '
+    'Напиши ему прямо сейчас 🔥',
 
     '👀 Угадай, кто сегодня скучает по тебе?\n\n{name}, {age}. {bio}\n\n{hook}'
-    'Только сегодня она отвечает всем без Premium — и очень откровенно. Время до 03:00 МСК ⏳',
+    'Только сегодня он отвечает всем без Premium — и очень откровенно. Время до 03:00 МСК ⏳',
 
     '🎁 Подарок на сегодня — {name}\n\n{hook}{bio}\n\n'
     'Целый день без ограничений: пиши, флиртуй, проси что хочешь. Бесплатно до 03:00 МСК 💋',
@@ -185,7 +185,7 @@ def admin_markup(character_id: str, variant: int):
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='📣 Опубликовать в канал', callback_data=f'gday:post:{character_id}:{variant}')],
         [InlineKeyboardButton(text='🎲 Другой текст', callback_data=f'gday:pick:{character_id}'),
-         InlineKeyboardButton(text='👩 Другая девушка', callback_data='gday:menu')],
+         InlineKeyboardButton(text='👨 Другой парень', callback_data='gday:menu')],
         [InlineKeyboardButton(text=f'💬 Написать {name_of(character_id)}', url=deep_link(character_id))],
     ])
 
@@ -213,7 +213,7 @@ async def send_admin_preview(bot, chat_id: int, character_id: str | None = None)
     from aiogram.types import BufferedInputFile
     cid = character_id or await asyncio.to_thread(current)
     if not cid:
-        await bot.send_message(chat_id, '🔥 Девушка дня: в ротации нет подходящих девушек.')
+        await bot.send_message(chat_id, '🔥 Парень дня: в ротации нет подходящих парней.')
         return
     variant = random.randrange(len(POST_TEMPLATES))
     photo, caption = await asyncio.to_thread(build_post, cid, variant)

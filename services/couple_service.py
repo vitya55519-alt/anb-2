@@ -19,19 +19,19 @@ logger = logging.getLogger(__name__)
 
 # Assigned once at level 3 — she starts calling the user by this name.
 PET_NAMES = (
-    'солнышко', 'милый', 'мой хороший', 'котик', 'родной',
-    'моя радость', 'дорогой', 'любимый',
+    'солнышко', 'милая', 'моя хорошая', 'котик', 'родная',
+    'моя радость', 'дорогая', 'любимая',
 )
 
 # Daily quests, deterministic pick. V3.59.1: no longer honor-system — a claim
 # only counts if today's dialog shows the task was actually done.
 DAILY_QUESTS: tuple[tuple[str, str], ...] = (
-    ('compliment', 'сделай ей комплимент — искренний и тёплый'),
-    ('dream', 'спроси, что ей снилось сегодня'),
-    ('red', 'попроси у неё фото в красном'),
+    ('compliment', 'сделай ему комплимент — искренний и тёплый'),
+    ('dream', 'спроси, что ему снилось сегодня'),
+    ('red', 'попроси у него фото в красном'),
     ('day', 'расскажи, как прошёл твой день'),
-    ('sweet', 'обратись к ней ласково в своём сообщении'),
-    ('voice', 'отправь ей голосовое сообщение'),
+    ('sweet', 'обратись к нему ласково в своём сообщении'),
+    ('voice', 'отправь ему голосовое сообщение'),
 )
 
 ANNIVERSARY_DAYS = (7, 30, 90)

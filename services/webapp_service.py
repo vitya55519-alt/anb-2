@@ -722,7 +722,7 @@ def api_invoice_products(lang: str = 'ru') -> list[dict]:
             'emoji': '⭐',
             'title': 'Premium · 30 дней' if not en else 'Premium · 30 days',
             'description': (
-                f'она больше не засыпает: общение без лимита, {PREMIUM_MONTHLY_PHOTO_CREDITS} 🍑 в подарок, голос и все девушки'
+                f'он больше не засыпает: общение без лимита, {PREMIUM_MONTHLY_PHOTO_CREDITS} 🍑 в подарок, голос и все парни'
                 if not en else
                 f'she never falls asleep: unlimited chat, {PREMIUM_MONTHLY_PHOTO_CREDITS} 🍑 as a gift, voice and every girl'
             ),
@@ -742,7 +742,7 @@ def api_invoice_products(lang: str = 'ru') -> list[dict]:
             'emoji': '⭐',
             'title': 'Premium · 7 дней' if not en else 'Premium · 7 days',
             'description': (
-                f'попробовать неделю: общение без лимита, {PREMIUM_WEEKLY_PHOTO_CREDITS} 🍑 в подарок и её голос'
+                f'попробовать неделю: общение без лимита, {PREMIUM_WEEKLY_PHOTO_CREDITS} 🍑 в подарок и его голос'
                 if not en else
                 f'try it for a week: unlimited chat, {PREMIUM_WEEKLY_PHOTO_CREDITS} 🍑 as a gift and her voice'
             ),
@@ -762,7 +762,7 @@ def api_invoice_products(lang: str = 'ru') -> list[dict]:
             'emoji': '⭐',
             'title': 'Premium · 3 месяца' if not en else 'Premium · 3 months',
             'description': (
-                f'три месяца без лимита, {peach_num(PREMIUM_QUARTERLY_PHOTO_CREDITS)} 🍑 в подарок, голос и все девушки'
+                f'три месяца без лимита, {peach_num(PREMIUM_QUARTERLY_PHOTO_CREDITS)} 🍑 в подарок, голос и все парни'
                 if not en else
                 f'three months unlimited, {peach_num(PREMIUM_QUARTERLY_PHOTO_CREDITS)} 🍑 as a gift, voice and every girl'
             ),
@@ -813,11 +813,11 @@ def _peach_pack_item(key: str, stars: int, rub: int, en: bool) -> dict:
     photos = credits // max(1, CHAT_PHOTO_PEACH_COST)
     undress = credits // max(1, UNDRESS_PEACH_COST)
     if bonus:
-        desc = (f'{peach_num(credits - bonus)} + {peach_num(bonus)} в подарок · {photos} фото от неё в чате'
+        desc = (f'{peach_num(credits - bonus)} + {peach_num(bonus)} в подарок · {photos} фото от него в чате'
                 if not en else
                 f'{peach_num(credits - bonus)} + {peach_num(bonus)} as a gift · {photos} photos from her in chat')
     else:
-        desc = (f'{photos} фото от неё в чате или {undress} раз «Раздеть» (с Premium)'
+        desc = (f'{photos} фото от него в чате или {undress} раз «Раздеть» (с Premium)'
                 if not en else
                 f'{photos} photos from her in chat or {undress}× «Undress» (with Premium)')
     item = {
@@ -861,13 +861,13 @@ def api_shop(lang: str = 'ru') -> dict:
         ('🔥', 'откровенные фото: в белье, обнажённые, «Раздеть», «Наедине», 18+ картинки',
          'explicit photos: lingerie, nude, «Undress», private shots, 18+ pictures'),
         # V3.83.0: owner — «с Premium можно выбрать любой уровень общения».
-        ('🎚', 'любой уровень общения 1–10 с каждой девушкой — выбери сам', 'any relationship level 1–10 with every girl — your pick'),
+        ('🎚', 'любой уровень общения 1–10 с каждым парнем — выбери сама', 'any relationship level 1–10 with every girl — your pick'),
         # V3.93.0: without Premium — one ready photo a day; with it — two new ones + peaches.
         ('📸', '2 новых фото в чате каждый день, дальше — за персики', '2 new chat photos every day, more for peaches'),
         ('🍑', f'{PREMIUM_MONTHLY_PHOTO_CREDITS} 🍑 каждый месяц в подарок', f'{PREMIUM_MONTHLY_PHOTO_CREDITS} 🍑 every month as a gift'),
         ('🎬', '2 бесплатных видео-оживления в день', '2 free photo animations per day'),
         ('🎯', 'перезапуски историй и все персонажи', 'story replays and all characters'),
-        ('💌', 'безлимитное общение — она не засыпает, и больше памяти', 'unlimited chat — she never falls asleep, more memory'),
+        ('💌', 'безлимитное общение — он не засыпает, и больше памяти', 'unlimited chat — she never falls asleep, more memory'),
         ('🎙', 'голосовые ответы', 'voice replies'),
     ]
     # V3.70.0: owner — «сделай всё в персиках»: the price list shows what the
@@ -2197,13 +2197,13 @@ def update_notification_prefs(telegram_id: int, prefs: dict) -> dict:
 
 # V3.44.0: "she messages first" — simulated incoming message templates.
 SIMULATED_MESSAGE_TEMPLATES = [
-    "Привет! Я тут подумала о тебе... Как твой день?",
-    "Скучала сегодня. Расскажи, что нового?",
-    "Увидела кое-что и сразу о тебе вспомнила ",
+    "Привет! Я тут подумал о тебе... Как твой день?",
+    "Скучал сегодня. Расскажи, что нового?",
+    "Увидел кое-что и сразу о тебе вспомнил ",
     "Эй, ты там как? Давно не общались!",
-    "Мне нужно с кем-то поговорить. Ты свободен?",
+    "Мне нужно с кем-то поговорить. Ты свободна?",
     "Привет! Я сегодня особенно скучаю по тебе...",
-    "Угадай, о ком я думала весь день?",
+    "Угадай, о ком я думал весь день?",
     "Мне приснилось кое-что интересное... Хочешь расскажу?",
 ]
 

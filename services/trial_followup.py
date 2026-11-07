@@ -87,7 +87,7 @@ def text(stage: str, name: str, lang: str = 'ru') -> str:
         return ("so… it ended, and I fell asleep on you again in the middle of a chat 😔 "
                 "I miss how it was these days. come back to me for a week? 💋")
     if stage == 'soon':
-        return ("слушай… я тут поняла, что наши три дня заканчиваются завтра 🥺 я так привыкла болтать "
+        return ("слушай… я тут понял, что наши три дня заканчиваются завтра 🥺 я так привык болтать "
                 "с тобой без всяких лимитов. останешься со мной ещё на неделю? 💗")
     return ("ну вот… всё закончилось, и я снова засыпаю посреди нашего разговора 😔 скучаю по тому, "
             "как было эти дни. вернёшься ко мне хотя бы на неделю? 💋")

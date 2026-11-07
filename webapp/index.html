@@ -1096,6 +1096,9 @@
   .unlim .us { font-size: 11px; opacity: .75; line-height: 1.3; }
   .unlim .utime { font-size: 12px; font-weight: 700; white-space: nowrap;
     padding: 4px 8px; border-radius: 10px; background: rgba(0,0,0,.35); }
+/* anb-2: hero photos/video and «Дом» are off until the heroes get faces (stage 4). */
+#mediaPhoto, #featApt, #featVideo, #featCosplay, #featHot, #featHotCircle,
+nav#bottomnav button[data-tab="pictures"] { display: none !important; }
 </style>
 </head>
 <body>
@@ -1147,7 +1150,7 @@
       <h3 id="l_lb_title"></h3>
       <div id="lbList"></div>
     </div>
-    <div class="note" id="l_chars_hint">Выбрать девушку для общения можно в чате бота — раздел «Персонажи»</div>
+    <div class="note" id="l_chars_hint">Выбрать парня для общения можно в чате бота — раздел «Персонажи»</div>
   </section>
   <section class="tab" id="tab-chats">
     <h2 id="l_chats_title2">Чаты</h2>
@@ -1338,7 +1341,7 @@
 <!-- V3.61.1: first-open choice «С сюжетом / Без сюжета» -->
 <div class="startsheet" id="startSheet" style="display:none"><div class="box">
   <div class="st-h">Как начать чат?</div>
-  <button class="st-opt" id="startStory"><b>📖 С сюжетом</b><span>Начнётся с готовой сцены от неё</span></button>
+  <button class="st-opt" id="startStory"><b>📖 С сюжетом</b><span>Начнётся с готовой сцены от него</span></button>
   <button class="st-opt" id="startPlain"><b>💬 Без сюжета</b><span>Чистый чат с твоего первого сообщения</span></button>
 </div></div>
 <!-- V3.60.9: level panel (tap the chip under her name) -->
@@ -1624,7 +1627,7 @@ const L_EN = {
   chan_revoked: 'Bonus revoked — you are no longer subscribed',
   chan_check_fail: 'Could not check the subscription — try again later',
   buy: 'Buy', auth_short: 'Open this app from Telegram',
-  selected_toast: 'selected', locked: 'This girl is locked for now', need_premium: 'Available with Premium ⭐',
+  selected_toast: 'selected', locked: 'This guy is locked for now', need_premium: 'Available with Premium ⭐',
   pa_undress_prem: 'Undressing her is a Premium feature ⭐',
   pic_spicy_prem: '18+ pictures are a Premium feature ⭐',
   fet_cap: 'Fetishes', fet_cap_ds: 'Pick a theme and she leads it, at any level', fet_h: '🎭 Fetishes', fet_sub: 'Adults only, mutual play. Pick a theme, or write your own', fet_locked: '🎭 Fetish mode unlocks with Premium ⭐', fet_ph: 'Your own theme (up to 80 characters)', fet_go: 'Start', fet_off: '✖ Turn off the theme', fet_refused: 'This theme is not possible', fet_on: 'on', fet_set: 'Theme is on',
@@ -1804,14 +1807,14 @@ const L_EN = {
 // V3.43.5: the full Russian dictionary stays the base; five more interface
 // languages arrive below as partial overrides on top of the English one.
 const L_RU = {
-  chars_title: 'Персонажи', loading: 'Загрузка…', chat_hints: ['Привет 😊', 'Расскажи о себе', 'Покажи себя 📸'], photo_save: '⬇️ Скачать фото', pa_save: '⬇️ Скачать', pa_anim: '🎬 Оживить', pa_undress: '🔥 Раздеть', fork_romance: '❤️ Ты мне правда нравишься', fork_passion: '🔥 Я думаю о тебе совсем не по-дружески 😏', fork_q: 'Она ждёт твоего ответа: какой у вас путь?', fork_taken: 'Путь уже выбран', fork_romance_on: '❤️ Вы на пути романтики', fork_passion_on: '🔥 Вы на пути страсти', fork_would: 'там:', path_map: 'Ваша дорога', path_romance: 'Романтика', path_passion: 'Страсть', path_romance_other: 'на пути романтики', path_passion_other: 'на пути страсти', lvl_pick_hint: 'Premium: нажми на любой уровень, и она сразу будет общаться так', lvl_pick_reset: 'Вернуть настоящий уровень', lvl_pick_premium: 'С Premium можно выбрать любой уровень 1–10', lvl_pick_done: 'уровень выбран:', pa_wait_anim: 'оживляю фото… это займёт пару минут 🎬', pa_wait_undress: 'раздевается… 🙈', pa_failed: 'Не получилось, персики не списаны — попробуй ещё раз', pa_not_found: 'Это фото уже нельзя изменить', video_limit: 'бесплатные оживления закончились', photo_save_hint: 'Зажми фото пальцем, чтобы сохранить', load_failed: 'Не получилось загрузить — проверь интернет', retry: 'Повторить',
+  chars_title: 'Персонажи', loading: 'Загрузка…', chat_hints: ['Привет 😊', 'Расскажи о себе', 'Покажи себя 📸'], photo_save: '⬇️ Скачать фото', pa_save: '⬇️ Скачать', pa_anim: '🎬 Оживить', pa_undress: '🔥 Раздеть', fork_romance: '❤️ Ты мне правда нравишься', fork_passion: '🔥 Я думаю о тебе совсем не по-дружески 😏', fork_q: 'Он ждёт твоего ответа: какой у вас путь?', fork_taken: 'Путь уже выбран', fork_romance_on: '❤️ Вы на пути романтики', fork_passion_on: '🔥 Вы на пути страсти', fork_would: 'там:', path_map: 'Ваша дорога', path_romance: 'Романтика', path_passion: 'Страсть', path_romance_other: 'на пути романтики', path_passion_other: 'на пути страсти', lvl_pick_hint: 'Premium: нажми на любой уровень, и он сразу будет общаться так', lvl_pick_reset: 'Вернуть настоящий уровень', lvl_pick_premium: 'С Premium можно выбрать любой уровень 1–10', lvl_pick_done: 'уровень выбран:', pa_wait_anim: 'оживляю фото… это займёт пару минут 🎬', pa_wait_undress: 'раздевается… 🙈', pa_failed: 'Не получилось, персики не списаны — попробуй ещё раз', pa_not_found: 'Это фото уже нельзя изменить', video_limit: 'бесплатные оживления закончились', photo_save_hint: 'Зажми фото пальцем, чтобы сохранить', load_failed: 'Не получилось загрузить — проверь интернет', retry: 'Повторить',
   chars_hint: 'Нажми на карточку — диалог откроется прямо здесь. История общая с чатом бота.',
   typing_now: 'печатает…',
-  active: 'доступна', prem: 'Premium', soon: 'скоро', selected: 'твоя девушка', years: 'лет', girl_of_day: 'Девушка дня · без Premium',
+  active: 'доступен', prem: 'Premium', soon: 'скоро', selected: 'твой парень', years: 'лет', girl_of_day: 'Парень дня · без Premium',
   // V3.55.2: секция премиум-персонажей под сеткой
   prem_chars_title: 'Премиум-персонажи', prem_chars_hint: 'Открываются подпиской Premium', prem_chars_owned: 'Открыты твоей подпиской',
   // V3.66.0: карточки магазина + миссии с персиками
-  lt_text: 'это фото я сделала только для тебя 🙈 открыть?',
+  lt_text: 'это фото я сделал только для тебя 🙈 открыть?',
   lt_btn: '🔓 Открыть фото',
   plan_trial: d => d + ' дня — попробовать', plan_trial_sub: 'разовая цена первой покупки · открыто всё откровенное',
   plan_w1: '1 неделя', plan_m1: '1 месяц', plan_m3: '3 месяца', plan_per_week: n => n + ' ₽ в неделю',
@@ -1819,11 +1822,11 @@ const L_RU = {
   prem_gift_line: n => n + ' 🍑 в подарок сразу',
   prem_tiles: [['🔥', 'Всё откровенное', 'Фото в белье и без, «Раздеть»'], ['💌', 'Она не засыпает', 'Общение без лимита днём и ночью']],
   prem_list: ['«Наедине» и 18+ картинки', 'Её голос — отвечает голосовыми', 'Все девушки, включая премиум', '2 оживления фото в день', 'Перезапуск историй', 'Больше памяти: помнит о тебе больше'],
-  peaches_title: 'Персики', peaches_word: 'персиков', pack_hot: 'хит', peach_photo_hint: n => '1 фото от неё = ' + n + ' 🍑',
+  peaches_title: 'Персики', peaches_word: 'персиков', pack_hot: 'хит', peach_photo_hint: n => '1 фото от него = ' + n + ' 🍑',
   free_peaches_row: 'Бесплатные персики каждый день — в «Миссиях»', price_list: 'Что сколько стоит',
   mis_today: 'Задания на сегодня', mis_reset: 'обновятся в 03:00', mis_achievements: 'Достижения',
   mis_invite: 'Пригласи друга', mis_invite_btn: 'Позвать',
-  mis_invite_hint: (p, n) => '+' + p + ' 🍑 тебе и другу, когда он напишет ей ' + n + ' сообщений',
+  mis_invite_hint: (p, n) => '+' + p + ' 🍑 тебе и другу, когда он напишет ему ' + n + ' сообщений',
   mis_invite_stat: (a, w) => 'приглашено: ' + a + (w ? ' · ещё общаются: ' + w : ''),
   mis_invite_next: (n, p, d) => 'за ' + n + ' друзей: ' + [(p && p !== '0') ? '+' + p + ' 🍑' : '', d ? d + ' дн. Premium' : ''].filter(Boolean).join(' и '),
   mis_today_hint: 'Общайся по-настоящему: короткие и повторяющиеся сообщения не засчитываются', mis_span: (a, b) => a + '/' + b + ' мин',
@@ -1831,19 +1834,19 @@ const L_RU = {
   mis_ready: n => 'Готово — забирай ' + n + ' 🍑', mis_done_list: n => 'Выполнено (' + n + ')',
   mis_done_toast: (name, n) => '🏆 «' + name + '» выполнено — забери +' + n + ' 🍑 в «Миссиях»',
   shop_title: 'Магазин', missions_title: 'Миссии', month: '/ 30 дней', week: '7 дней', pay_hint: 'Нажми на пакет — оплата картой, СБП или звёздами Telegram.',
-  share_img: '📤 Поделиться', invite_cta: '🍑 Позвать друга', invite_got: 'Ссылка скопирована — делись, и вам обоим капнет 🍑', share_fail: 'Не удалось поделиться', gal_share_hint: 'Поделись фото — когда друг разговорится с ней, вам обоим капнет 🍑', save_img: '📥 Сохранить', save_ok: 'Фото отправлено в чат — перешли его другу',
+  share_img: '📤 Поделиться', invite_cta: '🍑 Позвать друга', invite_got: 'Ссылка скопирована — делись, и вам обоим капнет 🍑', share_fail: 'Не удалось поделиться', gal_share_hint: 'Поделись фото — когда друг разговорится с ним, вам обоим капнет 🍑', save_img: '📥 Сохранить', save_ok: 'Фото отправлено в чат — перешли её другу',
     unlim_title: 'Безлимитные сообщения', unlim_sub: 'Первые часы после регистрации — текст бесплатно', unlim_left: 'осталось',
   free_tier: 'Бесплатный функционал', msg_day: 'сообщений в день', photos_day: 'фото в день',
   profile_title: 'Профиль', premium_on: 'Premium активен', premium_off: 'Бесплатный аккаунт',
-  streak: 'дней подряд', level: 'уровень отношений', selected_girl: 'выбранная девушка',
+  streak: 'дней подряд', level: 'уровень отношений', selected_girl: 'выбранный парень',
   // V3.55.5: серия дневных подарков + промокод в магазине (колесо убрано)
   gift_title: 'Дневной подарок', gift_day: n => `День ${n} из 7`, gift_claim: n => `Забрать +${n} 🍑`,
   gift_taken: 'Уже взято — обновится в 03:00', gift_capped: 'Копилка полная (1500 🍑) — потрать и забирай', gift_jackpot: '300🍑',
-      // V3.55.6: выбор манеры premium-персонажа — нежная/страстная
-      persona_q: 'Кем я буду с тобой — нежной или страстной? Выбери один раз, я запомню 🍑', persona_tender: 'Нежная', persona_passionate: 'Страстная', persona_saved_tender: 'Теперь я твоя нежная 🌸', persona_saved_passionate: 'Теперь я твоя страстная 🔥',
+      // V3.55.6: выбор манеры premium-персонажа — нежный/страстный
+      persona_q: 'Кем я буду с тобой — нежным или страстным? Выбери один раз, я запомню 🍑', persona_tender: 'Нежный', persona_passionate: 'Страстный', persona_saved_tender: 'Теперь я твой нежный 🌸', persona_saved_passionate: 'Теперь я твой страстный 🔥',
   promo_title: 'Промокод', promo_ph: 'Введи код', promo_btn: 'Активировать', promo_ok: n => `Код активирован: +${n} 🍑`,
   promo_err_unknown: 'Такого кода нет — проверь написание', promo_err_expired: 'Срок действия кода истёк', promo_err_exhausted: 'Все активации уже разобрали',
-  promo_err_inactive: 'Этот код отключён', promo_err_duplicate: 'Ты уже активировал этот код', promo_err_consent: 'Сначала прими условия в боте', promo_err_auth: 'Сначала открой бота',
+  promo_err_inactive: 'Этот код отключён', promo_err_duplicate: 'Ты уже активировала этот код', promo_err_consent: 'Сначала прими условия в боте', promo_err_auth: 'Сначала открой бота',
   open_bot: 'Открой бота, чтобы общаться 💬',
   docs_title: 'Документы и цены', checkword: 'кодовое слово',
   partner_title: 'Партнёрка', invited_lbl: 'людей приведено', earned_lbl: 'заработано',
@@ -1859,7 +1862,7 @@ const L_RU = {
   p_share_text: 'Тут ИИ-девушки, которые пишут первыми 💌 Заходи:',
   p_how: 'Как это работает',
   p_s1_t: 'Отправь ссылку', p_s1_s: 'Другу, в чат или в сторис',
-  p_s2_t: 'Друг пишет девушке', p_s2_s: (n, b) => `После ${n} сообщений вы оба получаете по ${b} 🍑`,
+  p_s2_t: 'Друг пишет парню', p_s2_s: (n, b) => `После ${n} сообщений вы оба получаете по ${b} 🍑`,
   p_s3_t: 'Ты зарабатываешь', p_s3_s: pct => `${pct}% с каждой его покупки — навсегда`,
   p_ladder: 'Бонусы за друзей',
   p_friends: n => { const a = n % 10, b = n % 100; return n + (a === 1 && b !== 11 ? ' друг' : (a >= 2 && a <= 4 && (b < 12 || b > 14) ? ' друга' : ' друзей')); },
@@ -1885,15 +1888,15 @@ const L_RU = {
   chan_warn: '⚠️ При отписке бонус аннулируется',
   chan_go: 'В канал', chan_check: 'Проверить подписку',
   chan_ok: b => `+${b} 🍑 начислено!`, chan_already: 'Бонус уже получен ✅',
-  chan_not: 'Ты пока не подписан на канал',
-  chan_revoked: 'Бонус аннулирован — ты отписался от канала',
+  chan_not: 'Ты пока не подписана на канал',
+  chan_revoked: 'Бонус аннулирован — ты отписалась от канала',
   chan_check_fail: 'Не удалось проверить подписку — попробуй позже',
   buy: 'Купить', auth_short: 'Открой приложение из Telegram',
-  selected_toast: 'выбрана', locked: 'Эта девушка пока закрыта', need_premium: 'Доступна с Premium ⭐',
-  pa_undress_prem: 'Раздеть её можно только с Premium ⭐',
+  selected_toast: 'выбран', locked: 'Этот парень пока закрыт', need_premium: 'Доступна с Premium ⭐',
+  pa_undress_prem: 'Раздеть его можно только с Premium ⭐',
   pic_spicy_prem: 'Откровенные картинки — только с Premium ⭐',
-  fet_cap: 'Фетиши', fet_cap_ds: 'Выбери тему, и она поведёт её сама, на любом уровне', fet_h: '🎭 Фетиши', fet_sub: 'Только для взрослых и по взаимной игре. Выбери тему или напиши свою', fet_locked: '🎭 Режим фетишей открывается с Premium ⭐', fet_ph: 'Своя тема (до 80 символов)', fet_go: 'Начать', fet_off: '✖ Выключить тему', fet_refused: 'Такая тема невозможна', fet_on: 'идёт', fet_set: 'Тема включена',
-  plots_h: '🎬 Сюжеты', plots_sub: 'Ролевые сцены: она пишет первой и держит роль весь день', plots_locked: '🎬 Сюжеты открываются с Premium ⭐', plots_badge: '⭐ Premium', plots_play: '▶', plots_on: 'идёт', plots_hint: 'Все сюжеты доступны с Premium', plots_cap: 'Сюжеты', plots_cap_ds: 'Ролевые сцены с ней: от лёгкого флирта до самого горячего', heat_sub: 'Насколько откровенно будет?', heat_soft: 'Нежно', heat_soft_ds: 'Романтика, флирт и поцелуи', heat_hot: 'Горячо', heat_hot_ds: 'Страстно и смело, откровенные намёки', heat_wild: 'Без тормозов', heat_wild_ds: 'Максимально откровенно и пошло', plot_exit: '✖ Без ролей', plot_act: 'акт', plot_done: '🎬 Сюжет пройден!', plot_next: '▶ Дальше', plot_all_done: 'Ты прошёл все её сюжеты 🔥', plot_left: 'Вы вышли из роли',
+  fet_cap: 'Фетиши', fet_cap_ds: 'Выбери тему, и он поведёт его сам, на любом уровне', fet_h: '🎭 Фетиши', fet_sub: 'Только для взрослых и по взаимной игре. Выбери тему или напиши свою', fet_locked: '🎭 Режим фетишей открывается с Premium ⭐', fet_ph: 'Своя тема (до 80 символов)', fet_go: 'Начать', fet_off: '✖ Выключить тему', fet_refused: 'Такая тема невозможна', fet_on: 'идёт', fet_set: 'Тема включена',
+  plots_h: '🎬 Сюжеты', plots_sub: 'Ролевые сцены: он пишет первым и держит роль весь день', plots_locked: '🎬 Сюжеты открываются с Premium ⭐', plots_badge: '⭐ Premium', plots_play: '▶', plots_on: 'идёт', plots_hint: 'Все сюжеты доступны с Premium', plots_cap: 'Сюжеты', plots_cap_ds: 'Ролевые сцены с ним: от лёгкого флирта до самого горячего', heat_sub: 'Насколько откровенно будет?', heat_soft: 'Нежно', heat_soft_ds: 'Романтика, флирт и поцелуи', heat_hot: 'Горячо', heat_hot_ds: 'Страстно и смело, откровенные намёки', heat_wild: 'Без тормозов', heat_wild_ds: 'Максимально откровенно и пошло', plot_exit: '✖ Без ролей', plot_act: 'акт', plot_done: '🎬 Сюжет пройден!', plot_next: '▶ Дальше', plot_all_done: 'Ты прошла все его сюжеты 🔥', plot_left: 'Вы вышли из роли',
   paid_prem: 'Premium активирован ✨', paid_credit: 'Фото-кредит начислен 📸',
   pay_failed: 'Оплата не прошла', pay_cancelled: 'Оплата отменена',
   invoice_err: 'Не удалось открыть оплату — попробуй ещё раз',
@@ -1903,30 +1906,30 @@ const L_RU = {
   pay_opened: 'Платёжная страница открыта — заверши оплату там',
   shop_custom_ph: 'Своё количество, напр. 500', shop_custom_btn: (n, price) => n > 0 ? n + ' 🍑 · ' + price : 'Купить',
   input_ph: 'Напиши сообщение…', send: 'Отправить',
-  empty_chat: 'Напиши первое сообщение — она ответит прямо здесь',
+  empty_chat: 'Напиши первое сообщение — он ответит прямо здесь',
   limit_reached: 'Дневной лимит бесплатных сообщений. Premium снимает лимит ⭐',
-  qb_limit: 'Она засыпает до завтра 😴 разбуди её',
+  qb_limit: 'Он засыпает до завтра 😴 разбуди его',
   qb_peaches: 'Не хватает персиков 🍑',
-  qb_voice: 'Её голос — с Premium 🎙 услышь, как она это говорит',
-  qb_spicy: 'Самые откровенные фото — с Premium 🔥 она уже готова тебе показать',
+  qb_voice: 'Его голос — с Premium 🎙 услышь, как он это говорит',
+  qb_spicy: 'Самые откровенные фото — с Premium 🔥 он уже готов тебе показать',
   spicy_btn: '🔥 Открыть с Premium',
   sext_btn: '🔥 Откровенно — с Premium',
-  voice_btn: '🎙 Слышать её голос всегда', pay_once: 'Разовый платёж · без автопродления',
+  voice_btn: '🎙 Слышать его голос всегда', pay_once: 'Разовый платёж · без автопродления',
   pay_stars_en: 'Telegram Stars', pay_sbp_en: 'Карта / СБП / крипта',
   pay_crypto_pg: 'Криптовалюта', pay_sbp_only: 'Карта / СБП', hn_title: 'Честно о нас 💜', hn_sub: '30 секунд, чтобы знать всё заранее',
-  hn_can: 'Что она умеет',
+  hn_can: 'Что он умеет',
   hn_list: ['Переписка 24/7, помнит твоё имя и важное о тебе', 'Пишет первой, скучает и ждёт тебя', 'Голосовые своим голосом', 'Фото и видео-кружки', 'Свидания и сюжеты с продолжением', '«Девушка дня»: новая героиня каждый день', 'Откровенно 18+: только для взрослых, в Premium'],
   hn_money: 'Бесплатно и Premium',
   hn_free: (f) => '💬 Бесплатно: ' + f.free_messages + ' сообщений в день' + (f.free_messages_later < f.free_messages ? ' (с ' + f.later_from_day + '-го дня — ' + f.free_messages_later + ')' : '') + ' и ' + f.free_photos + ' фото',
   hn_prem: (price) => '💎 Premium от ' + price + ': разовый платёж, без автопродления',
   fb_title: 'Будем рады вашим пожеланиям 💡', fb_sub: 'Что улучшить в боте? Ждём ваших предложений, читаем каждое',
   fb_ph: 'Твоё предложение или пожелание…', fb_send: 'Отправить', fb_done: 'Спасибо! Предложение ушло команде 💜', fb_err: 'Не получилось отправить, попробуй чуть позже',
-  hn_go: 'Ок, выбрать героиню', hn_link: '💜 Честно о нас',
+  hn_go: 'Ок, выбрать героя', hn_link: '💜 Честно о нас',
   trial_chip: '🔥 3 дня Premium',
   speak_free_left: n => n > 0 ? `🎙 бесплатных прослушиваний сегодня: ещё ${n}` : '🎙 это было последнее бесплатное прослушивание сегодня',
   sc_prem_only: '⭐ только с Premium',
   undress_tease: 'нравится? 😏 а хочешь увидеть, что под ним… нажми — и я сниму это для тебя 🔥',
-  undress_tease_btn: '🔥 Раздеть её',
+  undress_tease_btn: '🔥 Раздеть его',
   say_btn: '▶ Голосом',
   say_btn_prem: '🔊 Озвучить · Premium',
   say_wait: '● записывает голосовое…',
@@ -1934,20 +1937,20 @@ const L_RU = {
   qb_demo: 'Демо-Premium на 3 часа — бесплатно',
   qb_demo_on: 'Демо-Premium включён ✨',
   consent_needed: 'Сначала подтверди 18+ — открой бота и нажми /start',
-  set_main: 'Сделать твоей девушкой', reply_err: 'Не получилось ответить — попробуй ещё раз',
-  create_own: 'Создать свою', create_sub: 'Внешность, фигура и характер — она будет общаться так, как ты выберешь',
+  set_main: 'Сделать твоим парнем', reply_err: 'Не получилось ответить — попробуй ещё раз',
+  create_own: 'Создать свою', create_sub: 'Внешность, фигура и характер — он будет общаться так, как ты выберешь',
     wiz_templates: '✨ Готовые шаблоны — нажми, и всё заполнится',
-    wiz_groups: { appearance: 'Внешность', character: 'Характер', story: 'История и теги', duo: '👯 Вторая девушка в этом же чате', reference: 'Фото-референс', share: 'Публикация' },
-  wiz_step: 'Шаг', wiz_name_ph: 'Как её зовут? (до 24 символов)', wiz_create: 'Создать',
+    wiz_groups: { appearance: 'Внешность', character: 'Характер', story: 'История и теги', duo: '👯 Второй парень в этом же чате', reference: 'Фото-референс', share: 'Публикация' },
+  wiz_step: 'Шаг', wiz_name_ph: 'Как его зовут? (до 24 символов)', wiz_create: 'Создать',
     wiz_create_peaches: n => '🎨 Создать · 🍑 ' + n, wiz_create_stars: n => '⭐ Создать · ' + n + ' Stars',
-  wiz_free_public: 'бесплатно — она появится в «Сообществе»', wiz_free: 'бесплатно (админ)', wiz_paid_toast: 'Рисую твою героиню — до минуты. Карточка появится в сетке ✨', creating_banner: 'Создаю {name} — обычно минута-две. Карточка появится сама ✨',
+  wiz_free_public: 'бесплатно — он появится в «Сообществе»', wiz_free: 'бесплатно (админ)', wiz_paid_toast: 'Рисую твоего героя — до минуты. Карточка появится в сетке ✨', creating_banner: 'Создаю {name} — обычно минута-две. Карточка появится сама ✨',
   wiz_exists: 'Персонаж уже создан — создать заново можно в чате бота',
-  made_badge: 'создана игроком', mine_badge: 'твоя', mychar_note: 'Твой персонаж создан 🎨 создать заново можно в чате бота',
+  made_badge: 'создан игроком', mine_badge: 'твой', mychar_note: 'Твой персонаж создан 🎨 создать заново можно в чате бота',
   // V3.44.8: строки страницы автора.
   author_row: name => 'Автор: ' + name, author_sub: n => 'Персонажей: ' + n,
   author_empty: 'Пока нет опубликованных персонажей',
   // V3.38.0: вкладки в стиле Come Closer — чаты, студия картинок, профиль.
-  chats_title: 'Чаты', chats_empty: 'Диалогов пока нет — открой персонажу, и она ответит прямо здесь.',
+  chats_title: 'Чаты', chats_empty: 'Диалогов пока нет — открой персонажу, и он ответит прямо здесь.',
   pic_title: 'Создать картинку', pic_prompt_ph: 'Опиши картинку — кто, где, настроение…',
   pic_style: 'Стиль', pic_format: 'Формат',
   style_anime: 'Аниме', style_realistic: 'Реализм', style_fantasy: 'Фэнтези',
@@ -1969,20 +1972,20 @@ const L_RU = {
   videos_title: 'Мои видео', videos_empty: 'Видео пока нет — твои ролики появятся здесь.',
   preset_auto: 'Авто', preset_kiss: 'Поцелуй', preset_wink: 'Подмигивание', preset_turn: 'Оборот',
   preset_whisper: 'Шёпот', preset_touch: 'Касание', preset_caress: 'Ласка',
-  my_chars: 'МОИ ПЕРСОНАЖИ', create_char: '＋ Создать', no_chars: 'Персонажа пока нет — создай свою девушку.',
+  my_chars: 'МОИ ПЕРСОНАЖИ', create_char: '＋ Создать', no_chars: 'Персонажа пока нет — создай своего парня.',
   author_earnings: '💰 Авторский доход', author_earnings_value: n => Math.round(n) + ' 🍑',
   // V3.44.11: кабинет создателя в профиле.
   creator_row: '🎨 Кабинет создателя', creator_title: 'Кабинет создателя',
   creator_empty: 'Персонажей пока нет. Создание персонажа — за персики 🍑',
   creator_publish: 'На витрину', creator_unpublish: 'Снять с витрины',
-  creator_on_vitrine: 'на витрине', creator_private: 'личная',
+  creator_on_vitrine: 'на витрине', creator_private: 'личный',
   // V3.45.28: публикация в «Сообщество» теперь идёт через модератора.
   creator_pending: 'на модерации', creator_pending_toast: 'Отправлена на модерацию 🕒 админ проверит и опубликует',
-  creator_published_toast: 'На витрине ✅ теперь её видят все',
+  creator_published_toast: 'На витрине ✅ теперь его видят все',
   creator_unpublished_toast: 'Снята с витрины — видишь только ты',
   creator_earned: n => '💰 ' + n + ' ⭐ заработано',
   creator_total_earnings: n => 'Всего: 💰 ' + n + ' ⭐',
-  creator_summary: s => 'Твои персонажи: ' + s, creator_chat: 'Написать ей',
+  creator_summary: s => 'Твои персонажи: ' + s, creator_chat: 'Написать ему',
   creator_edit: 'Изменить', creator_delete: 'Удалить', creator_delete_confirm: 'Удалить навсегда?', creator_delete_again: 'Нажми ещё раз для подтверждения',
   edit_title: 'Редактировать персонажа', edit_name: 'Имя', edit_bio: 'Описание', edit_age: 'Возраст',
   edit_save: 'Сохранить', edit_saved: 'Сохранено ✅', edit_name_required: 'Имя обязательно', edit_age_bad: 'Возраст 18–99', delete_done: 'Персонаж удалён', cancel: 'Отмена',
@@ -1990,31 +1993,31 @@ const L_RU = {
   ach_title: 'Достижения', gal_title: 'Моя галерея', gal_empty: 'Фото пока нет — создай его в «Наедине».', gal_count: n => n + ' фото',
   partner_row: '💰 Партнёрка', docs_row: '📜 Документы и цены', open_chat: 'чат',
   // V3.39.0: карточка персонажа как у Come Closer + медиа в чате.
-  start_chat: 'Начать чат', plot: 'ОНА ПИШЕТ ТЕБЕ ПЕРВОЙ', make_mine: '❤️ Сделать твоей', rel_level: 'Уровень близости', lb_title: ' Топ популярных',
+  start_chat: 'Начать чат', plot: 'ОН ПИШЕТ ТЕБЕ ПЕРВЫМ', make_mine: '❤️ Сделать твоим', rel_level: 'Уровень близости', lb_title: ' Топ популярных',
     // V3.53.0: «Собери галерею» — каждые 50 фото персонажа = один сет галереи.
     collect_lbl: 'Галерея', collect_sets: n => n + ' сетов', collect_done: '🖼 Сет галереи собран! +1 🏆 — собирай следующие 50',
-    path_lbl: '💞 Характер связи', path_tender: 'Нежная', path_balanced: 'Сбалансированная', path_free: 'Раскрепощённая', path_end_l: 'Нежность', path_end_r: 'Страсть',
+    path_lbl: '💞 Характер связи', path_tender: 'Нежный', path_balanced: 'Сбалансированный', path_free: 'Раскрепощённый', path_end_l: 'Нежность', path_end_r: 'Страсть',
       // V3.51.0: проигрыватель историй (играбельные квесты, двигающие путь).
       story_btn: 'Истории', story_title: 'Истории', story_back: '← К историям',
       story_locked_fork: 'Откроется, когда вы выберете путь (3-й уровень)', story_locked_romance: 'Только на пути романтики', story_locked_passion: 'Только на пути страсти',
       story_locked_level: lvl => '🔒 Откроется на уровне близости ' + lvl, story_locked_tasks: n => '🔒 Ещё ' + n + ' заданий до открытия',
       story_done: 'Пройдено', story_canon: ' · твой путь', story_play: 'Играть', story_choose: 'Выбери, как будет',
-      story_result: 'Что произошло', story_reaction: 'Её реакция', story_axis_up: 'Путь сдвинулся к страсти', story_pts_passion: 'к страсти', story_pts_tender: 'к нежности', marital_lbl: '💍 Её семейное положение', marital_default: 'Как задумано', marital_single: 'Свободна', marital_boyfriend: 'Есть парень', marital_married: 'Замужем', marital_divorced: 'В разводе', marital_open: 'Свободные отношения', marital_saved: 'Готово, теперь она будет общаться по-другому', marital_change: 'смена', marital_confirm: 'Поменять её семейное положение за', marital_no_peaches: 'Не хватает персиков — пополни в магазине', story_axis_down: 'Путь сдвинулся к нежности', story_axis_same: 'Путь остался равновесным',
-      story_thinking: 'Она представляет, как всё будет… 💭', story_photo_wait: '📸 кадр к этому моменту уже в пути…',
-      story_beat: 'Через миг…', story_photo: '📸 Кадр к нашей истории', story_empty: 'Пока нет историй', story_hint: 'Твой выбор здесь двигает шкалу «Характер связи» на её карточке.',
+      story_result: 'Что произошло', story_reaction: 'Его реакция', story_axis_up: 'Путь сдвинулся к страсти', story_pts_passion: 'к страсти', story_pts_tender: 'к нежности', marital_lbl: '💍 Его семейное положение', marital_default: 'Как задумано', marital_single: 'Свободен', marital_boyfriend: 'Есть девушка', marital_married: 'Замужем', marital_divorced: 'В разводе', marital_open: 'Свободные отношения', marital_saved: 'Готово, теперь он будет общаться по-другому', marital_change: 'смена', marital_confirm: 'Поменять его семейное положение за', marital_no_peaches: 'Не хватает персиков — пополни в магазине', story_axis_down: 'Путь сдвинулся к нежности', story_axis_same: 'Путь остался равновесным',
+      story_thinking: 'Он представляет, как всё будет… 💭', story_photo_wait: '📸 кадр к этому моменту уже в пути…',
+      story_beat: 'Через миг…', story_photo: '📸 Кадр к нашей истории', story_empty: 'Пока нет историй', story_hint: 'Твой выбор здесь двигает шкалу «Характер связи» на его карточке.',
       // V3.51.1: админ-лента того, что генерируют пользователи в Mini App.
       gen_row: '🛠 Генерации пользователей', gen_title: 'Генерации пользователей', gen_empty: 'Пока ничего не сгенерировано', gen_more: 'Загрузить ещё',
-    comments_lbl: '💬 Комментарии', comment_placeholder: 'Напиши комментарий...', comment_submit: 'Отправить', comment_empty: 'Пока нет комментариев — будь первым!',
+    comments_lbl: '💬 Комментарии', comment_placeholder: 'Напиши комментарий...', comment_submit: 'Отправить', comment_empty: 'Пока нет комментариев — будь первой!',
   wiz_save: 'Сохранить', wiz_skip: 'Пропустить', wiz_skip_hint: 'Напиши или пропусти...', wiz_upload_photo: 'Загрузить фото',
   seg_official: '🍑 Персиковый сад', seg_community: '👥 Сообщество', seg_premium: '⭐ Премиум',
   char_search_ph: 'Поиск по сообществу: имя или #тег…',
-  media_busy: 'Подожди, она ещё занята прошлым фото…', media_wait_photo: 'Отправляю фото…', media_wait_circle: 'Записываю кружочек — 1–3 минуты…',
+  media_busy: 'Подожди, он ещё занят прошлым фото…', media_wait_photo: 'Отправляю фото…', media_wait_circle: 'Записываю кружочек — 1–3 минуты…',
   media_wait_voice: 'Записываю голос…', media_wait_video: 'Рисую видео — 1–3 минуты…',
-  stt_wait: 'Узнаю твой голос…', mic_denied: 'Нет доступа к микрофону — разреши его в настройках', mic_short: 'Слишком коротко — скажи что-нибудь 🙂', mic_nospeech: 'Не смогла разобрать слова — попробуй ещё раз', mic_err: 'Голосовое не отправилось — попробуй ещё раз', attach_err: 'Не удалось отправить фото', attach_big: 'Фото слишком тяжёлое — пришли полегче', attach_wait: 'Подожди пару секунд перед следующим фото 🙂', rec_hint: '‹ влево — отмена', rec_cancel: 'Отмена',
+  stt_wait: 'Узнаю твой голос…', mic_denied: 'Нет доступа к микрофону — разреши его в настройках', mic_short: 'Слишком коротко — скажи что-нибудь 🙂', mic_nospeech: 'Не смог разобрать слова — попробуй ещё раз', mic_err: 'Голосовое не отправилось — попробуй ещё раз', attach_err: 'Не удалось отправить фото', attach_big: 'Фото слишком тяжёлое — пришли полегче', attach_wait: 'Подожди пару секунд перед следующим фото 🙂', rec_hint: '‹ влево — отмена', rec_cancel: 'Отмена',
   circle_limit: 'На кружочек не хватает 🍑',
-  co_circle: '🎥 Кружочек от неё', co_hot: '🤫 Тайное видео — только тебе',
-  feat_hot_circle: 'Тайное видео', cap_hot_circle: 'Её секретный кружочек только для тебя: раздевается и ласкает себя. 4 000 🍑, спишем только если получится',
-  media_wait_hot: 'Она записывает тайное видео — 3–5 минут…',
+  co_circle: '🎥 Кружочек от него', co_hot: '🤫 Тайное видео — только тебе',
+  feat_hot_circle: 'Тайное видео', cap_hot_circle: 'Его секретный кружочек только для тебя: раздевается и ласкает себя. 4 000 🍑, спишем только если получится',
+  media_wait_hot: 'Он записывает тайное видео — 3–5 минут…',
   // V3.42.2: читаемые подписи к кнопкам чата (голосовая кнопка убрана).
   media_photo: 'Фото', media_video: 'Видео', media_circle: 'Кружок',
   feat_quest: 'Задание', feat_date: 'Свидание', feat_apt: 'Квартира',
@@ -2022,33 +2025,33 @@ const L_RU = {
   feat_video: 'Видео', feat_cosplay: 'Косплей', feat_hot: 'Наедине',
   // V3.64.0: кнопка «✨ Возможности» и пояснения к каждой функции чата.
   cap_btn: '✨ Возможности', cap_btn_sub: 'фото · свидания · истории · наедине',
-  cap_title: '✨ Чем займёмся?', cap_sub: 'Всё, что можно делать с ней кроме переписки', cap_close: 'Закрыть',
-  cap_photo: 'Выбери сцену, и она пришлёт своё фото оттуда',
+  cap_title: '✨ Чем займёмся?', cap_sub: 'Всё, что можно делать с ним кроме переписки', cap_close: 'Закрыть',
+  cap_photo: 'Выбери сцену, и он пришлёт своё фото оттуда',
   cap_quest: '2–3 маленьких задания на день. Выполняешь в чате — растёт близость и открываются истории',
   cap_story: 'Сюжетные истории: ты выбираешь, как поступить, и от этого зависит ваш роман',
-  cap_date: 'Пригласи её в кафе, кино или на прогулку. Она расскажет, как прошёл вечер, и пришлёт фото',
-  cap_apt: 'Ваш общий дом. Выбери комнату и занятие, например ужин или кино на диване, и она ответит в чате',
-  cap_video: 'Оживи её фото: из снимка получится короткое видео',
-  cap_cosplay: 'Она переоденется в известного персонажа и пришлёт фото в образе',
+  cap_date: 'Пригласи его в кафе, кино или на прогулку. Он расскажет, как прошёл вечер, и пришлёт фото',
+  cap_apt: 'Ваш общий дом. Выбери комнату и занятие, например ужин или кино на диване, и он ответит в чате',
+  cap_video: 'Оживи его фото: из снимка получится короткое видео',
+  cap_cosplay: 'Он переоденется в известного персонажа и пришлёт фото в образе',
   cap_hot: 'Откровенные фото только для тебя: выбираешь образ, место и настроение',
   // V3.41.0: панель фич в чате приложения (квартира / свидание / задание дня).
-  apt_intro: '🏠 Это ваша общая квартира. Выбери комнату и что вы делаете вместе — она ответит в чате, а близость вырастет ❤️', feat_done_btn: '✅ Я сделал · проверить', feat_claimed: 'Сегодня уже выполнено ❤️', quest_not_done: 'Сначала сделай это в чате с ней 😉 потом нажми ещё раз',
+  apt_intro: '🏠 Это ваша общая квартира. Выбери комнату и что вы делаете вместе — он ответит в чате, а близость вырастет ❤️', feat_done_btn: '✅ Я сделал · проверить', feat_claimed: 'Сегодня уже выполнено ❤️', quest_not_done: 'Сначала сделай это в чате с ним 😉 потом нажми ещё раз',
   // V3.49.0: чек-лист заданий дня (2-3 в день, лесенка историй).
   feat_tasks_left: 'ещё заданий до', feat_total: 'заданий выполнено всего',
-  feat_empty: 'Здесь пока пусто', feat_paid: 'Свидание оплачено 💕 она напишет в чат',
-  apt_wait: 'Она уже идёт к тебе… 🏠', date_wait: 'Собирается на свидание… 💕', date_photo_wait: '📸 фото со свидания уже в пути…',
+  feat_empty: 'Здесь пока пусто', feat_paid: 'Свидание оплачено 💕 он напишет в чат',
+  apt_wait: 'Он уже идёт к тебе… 🏠', date_wait: 'Собирается на свидание… 💕', date_photo_wait: '📸 фото со свидания уже в пути…',
   // V3.43.5: секция «Настройки» в профиле (пошлый режим + язык интерфейса).
   settings_title: 'Настройки', spicy_title: '🌶 Пошлый режим', spicy_on: 'вкл', spicy_off: 'выкл',
   spicy_prem: 'Пошлый режим — фишка Premium ⭐', spicy_toast_on: 'Пошлый режим включён 🔥',
   spicy_toast_off: 'Пошлый режим выключен 🌙',
   spicy_banner: '🔥 Пошлый режим', spicy_banner_sub: 'Без стеснения и запретных тем: открыто про секс, желания и фантазии',
-  spicy_m_text: 'Общение становится совсем другим. Она перестаёт стесняться: открыто говорит о сексе, своих желаниях и фантазиях, дразнит, заводит и сама предлагает пошалить. Никаких запретных тем, а чем ближе вы, тем горячее. Выключить можно в любой момент.',
+  spicy_m_text: 'Общение становится совсем другим. Он перестаёт стесняться: открыто говорит о сексе, своих желаниях и фантазиях, дразнит, заводит и сам предлагает пошалить. Никаких запретных тем, а чем ближе вы, тем горячее. Выключить можно в любой момент.',
   spicy_m_warn: 'Только 18+ · фишка Premium ⭐', spicy_m_on: 'Включить 🔥', spicy_m_off: 'Выключить',
   spicy_m_buy: 'Открыть с Premium ⭐', spicy_m_later: 'Позже', lang_title: '🌐 Язык интерфейса',
   // V3.43.7: выбор сцены за кнопкой «📸 Фото» в чате приложения.
   photo_menu_title: '📸 Какое фото?',
   sc_locked: n => 'откроется на уровне ' + n,
-  scg_everyday: 'Её день', scg_fashion: 'Её образы', scg_evening: 'Вечер и выход', scg_private: 'Приват 18+',
+  scg_everyday: 'Его день', scg_fashion: 'Его образы', scg_evening: 'Вечер и выход', scg_private: 'Приват 18+',
   sc_selfie: '📸 Селфи', sc_home: '🏠 Дома', sc_park: '🌿 Прогулка в парке', sc_cafe: '☕ В кафе',
   sc_street: '🌆 На улице', sc_mirror: '🪞 В зеркале', sc_outfit: '👗 Мой наряд сегодня', sc_shop: '🛍 На шопинге',
   sc_car: '🚗 В машине', sc_gym: '🏋️ В спортзале', sc_restaurant: '🍽 Ужин в ресторане', sc_cinema: '🎬 В кино',
@@ -2056,11 +2059,11 @@ const L_RU = {
   sc_bar: '🍸 В баре', sc_karaoke: '🎤 Караоке', sc_rooftop: '🌃 На крыше ночью', sc_club: '💃 В клубе',
   sc_personal: '💌 Только для тебя', sc_lingerie: '🖤 В кружевном белье', sc_private_fashion: '🔐 Будуар',
   // V3.61.6: one line under each scene so it is clear what she will send.
-  sch_selfie: 'она фоткает себя прямо сейчас', sch_home: 'уютно дома, в домашнем', sch_park: 'гуляет среди деревьев',
+  sch_selfie: 'он фоткает себя прямо сейчас', sch_home: 'уютно дома, в домашнем', sch_park: 'гуляет среди деревьев',
   sch_cafe: 'за столиком с кофе и десертом', sch_street: 'идёт по городу, стрит-стайл', sch_shop: 'примеряет новое в бутике',
   sch_car: 'селфи за рулём', sch_gym: 'селфи в зеркале зала, в спортивном', sch_cinema: 'с попкорном перед фильмом',
   sch_embankment: 'у воды на закате', sch_mirror: 'в полный рост перед зеркалом', sch_outfit: 'показывает, в чём идёт сегодня',
-  sch_fashion: 'как у модели, в студии', sch_restaurant: 'при свечах, нарядная', sch_evening: 'собралась на вечер',
+  sch_fashion: 'как у модели, в студии', sch_restaurant: 'при свечах, нарядный', sch_evening: 'собрался на вечер',
   sch_bar: 'с коктейлем у барной стойки', sch_karaoke: 'поёт под неон', sch_rooftop: 'огни города за спиной',
   sch_club: 'на танцполе, вечеринка', sch_personal: 'кружево и свечи, только тебе', sch_lingerie: 'дерзкий будуар в белье',
   sch_private_fashion: 'полупрозрачное кимоно, тёплый свет',
@@ -2530,7 +2533,7 @@ function renderCharacters(list) {
     }
     return true;
   });
-  // V3.92.0: «🔥 Девушка дня» rides first in her segment.
+  // V3.92.0: «🔥 Парень дня» rides first in her segment.
   shown.sort((a, b) => (b.girl_of_day ? 1 : 0) - (a.girl_of_day ? 1 : 0));
   const grid = document.getElementById('chargrid');
   // V3.45.28: the search box belongs to the community + premium витрины.
@@ -2669,7 +2672,7 @@ async function loadCharacters() {
   }
 }
 
-// V3.63.2: the bot's «💬 ответить ей» buttons open /webapp?open=chat — the
+// V3.63.2: the bot's «💬 ответить ему» buttons open /webapp?open=chat — the
 // app goes straight into the selected girl's dialog (once per launch), so
 // answering her first message is one tap instead of hunting for her card.
 let _deepChatDone = false;
@@ -3240,7 +3243,7 @@ function openLevelSheet() {
     });
     let left = '';
     if (j.messages_left > 0) left += 'Осталось примерно <b>' + j.messages_left + '</b> сообщений';
-    if (j.days_left > 0) left += (left ? ' и ' : 'Осталось ') + '<b>' + j.days_left + '</b> ' + (j.days_left === 1 ? 'день' : (j.days_left < 5 ? 'дня' : 'дней')) + ' общения (заходи к ней каждый день)';
+    if (j.days_left > 0) left += (left ? ' и ' : 'Осталось ') + '<b>' + j.days_left + '</b> ' + (j.days_left === 1 ? 'день' : (j.days_left < 5 ? 'дня' : 'дней')) + ' общения (заходи к нему каждый день)';
     if (!left) left = 'Совсем чуть-чуть — ещё пара тёплых сообщений 😉';
     html += '<div class="left">' + left + '.</div>';
   } else if (j.level >= j.max_level) {
@@ -3319,7 +3322,7 @@ async function openGuestPicker(characterId) {
     } catch (e) { list = []; }
   }
   const girls = list.filter(c => c.id !== characterId && c.status === 'active');
-  let html = '<h3>👭 Позвать в чат</h3><div class="hint">Она зайдёт в эту переписку, и дальше они будут отвечать вдвоём.</div><div class="grid">';
+  let html = '<h3>👭 Позвать в чат</h3><div class="hint">Он зайдёт в эту переписку, и дальше они будут отвечать вдвоём.</div><div class="grid">';
   girls.forEach(c => {
     html += '<button class="g" data-guest="' + esc(c.id) + '"><img src="' + esc(c.photo) + '" alt="" loading="lazy">' + esc(c.name) + '</button>';
   });
@@ -3417,7 +3420,7 @@ function renderPersonaBanner(characterId) {
   document.getElementById('personaPassionate').addEventListener('click', () => choosePersona(characterId, 'passionate'));
 }
 
-// V3.59.5: «💍 Её семейное положение» on the character page.
+// V3.59.5: «💍 Его семейное положение» on the character page.
 const MARITAL_KEYS = ['mar_single', 'mar_boyfriend', 'mar_married', 'mar_divorced', 'mar_open'];
 function renderMarital(c) {
   const box = document.getElementById('charMarital');
@@ -3590,7 +3593,7 @@ function renderChatReply(j) {
   if (j.sext_offer) {
     box.insertAdjacentHTML('beforeend', `<div class="chat-offer"><button class="mchip on" onclick="quickBuy('spicy')">${esc(trialChip(L.sext_btn || L.spicy_btn))}</button></div>`);
   }
-  // V3.106.0: her free voice notes are used up — «слышать её голос всегда».
+  // V3.106.0: her free voice notes are used up — «слышать его голос всегда».
   if (j.voice_offer) {
     box.insertAdjacentHTML('beforeend', `<div class="chat-offer"><button class="mchip on" onclick="quickBuy('voice')">${esc(trialChip(L.voice_btn || L.qb_voice))}</button></div>`);
   }
@@ -5116,7 +5119,7 @@ function closeWizard() {
 
 let pollTimer = null;
 // V3.44.14: a paid creation can take a couple of minutes (fal timeouts are
-// bounded, but real). Show a live banner so «создаю, а её нет» reads as
+// bounded, but real). Show a live banner so «создаю, а его нет» reads as
 // «рисую» — and keep polling until she lands, not just 90 seconds.
 async function checkConstructorStatus() {
   const banner = document.getElementById('creatingBanner');
@@ -6211,7 +6214,7 @@ function renderProfileBody() {
         <div class="sub">${m.premium ? '⭐ ' + esc(L.premium_on) : esc(L.premium_off)} · id ${esc(m.id)}</div>
       </div>
     </div>
-    <!-- V3.85.0: owner — «выбранная девушка / уровень 9 из 8 / авторский доход
+    <!-- V3.85.0: owner — «выбранный парень / уровень 9 из 8 / авторский доход
          — зачем это в профиле?». Levels live per girl in her chat; author
          earnings live in the creator cabinet. -->
     <div class="stat"><span class="k">🔥 ${esc(L.streak)}</span><span class="v">${esc(m.streak)}</span></div>
