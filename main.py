@@ -16105,7 +16105,8 @@ BOT_PROFILE = {
 
 
 async def _apply_bot_profile() -> None:
-    if os.getenv('BOT_PROFILE_ENABLED', '1') != '1':
+    # anb-2: off by default — Витя edits name/description in BotFather.
+    if os.getenv('BOT_PROFILE_ENABLED', '0') != '1':
         return
     for lang, prof in BOT_PROFILE.items():
         code = '' if lang == 'ru' else lang
@@ -16257,7 +16258,8 @@ async def main():
     # V3.19.11: refresh the public storefront (profile description) on every
     # deploy. A description failure must never block startup.
     try:
-        await apply_bot_descriptions(bot)
+        if os.getenv('BOT_DESCRIPTIONS_ENABLED', '0') == '1':
+            await apply_bot_descriptions(bot)
     except Exception:
         logger.exception('bot description apply failed (non-fatal)')
     await dp.start_polling(bot)
