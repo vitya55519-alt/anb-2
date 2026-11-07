@@ -566,7 +566,7 @@ async def _rituals(bot):
             # V3.56.7: the ritual belongs to the character the USER chats with,
             # and so does the attached pool photo — the global CHARACTER_ID
             # used to dress every girl's morning ping in Anna's media.
-            char_id = sel_char or CHARACTER_ID or 'anna_01'
+            char_id = sel_char or CHARACTER_ID or 'mark_01'
             text=retention_features_service.get_retention_text(kind, char_id)
             # V3.64.8: her words and the service promo no longer share one
             # caption («...составишь компанию?\n🎁 забирай дневной подарок»):

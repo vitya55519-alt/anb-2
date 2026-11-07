@@ -825,44 +825,12 @@ ORDINARY_REFERENCE_PROTOCOL = (
 # the softness clause stays. A DNA json may still override via
 # visual_identity.body_spec.
 BODY_SPECS = {
-    'alena_01': 'a curvy athletic hourglass build with a wasp waist, round lifted hips and a natural full bust (silicone, Russian size 4, D cup)',
-    'maria_01': 'a voluptuous soft hourglass build with a wasp waist, round lifted wide hips and a full bust (silicone, Russian size 5, E cup)',
-    'erika_01': 'a feminine athletic hourglass build with a narrow waist, round lifted hips and a natural modest bust (silicone, Russian size 3, C cup)',
-    'sonya_01': 'a feminine fit hourglass build with a narrow waist, round lifted hips and a natural modest bust (silicone, Russian size 3, C cup)',
-    'vika_01': 'a curvy athletic hourglass build with a wasp waist, round lifted hips and a natural full bust (silicone, Russian size 4, D cup)',
-    'alisa_01': 'a voluptuous fit hourglass build with a wasp waist, round lifted wide hips and a full bust (silicone, Russian size 5, E cup)',
-    'mila_01': 'a curvy soft hourglass build with a wasp waist, round lifted hips and a natural full bust (silicone, Russian size 4, D cup)',
-    # V3.56.8: the newer heroines used to fall through to the E-cup default —
-    # they get declared sizes too.
-    'veronika_01': 'a curvy soft hourglass build with a wasp waist, round lifted hips and a natural full bust (silicone, Russian size 4, D cup)',
-    'eva_01': 'a feminine fit hourglass build with a narrow waist, round lifted hips and a natural modest bust (silicone, Russian size 3, C cup)',
-    'darina_01': 'a feminine soft hourglass build with a narrow waist, round lifted hips and a natural modest bust (silicone, Russian size 3, C cup)',
-    'kristina_01': 'a voluptuous soft hourglass build with a wasp waist, round lifted wide hips and a full bust (silicone, Russian size 5, E cup)',
-    'romina_01': 'a voluptuous soft hourglass build with a wasp waist, round lifted wide hips and a full bust (silicone, Russian size 5, E cup)',
-    'violetta_01': 'a curvy fit hourglass build with a wasp waist, round lifted hips and a natural full bust (silicone, Russian size 4, D cup)',
-    'zlata_01': 'a feminine fit hourglass build with a narrow waist, round lifted hips and a natural modest bust (silicone, Russian size 3, C cup)',
-    'lera_01': 'a curvy feminine hourglass build with a narrow waist, round lifted hips and a natural full bust (silicone, Russian size 4, D cup)',
-    'diana_01': 'a curvy athletic hourglass build with a wasp waist, round lifted hips and a natural full bust (silicone, Russian size 4, D cup)',
-    'nika_01': 'a curvy soft hourglass build with a wasp waist, round lifted hips and a natural full bust (silicone, Russian size 4, D cup)',
-    'ksyusha_01': 'a petite curvy hourglass build with a narrow waist, round lifted hips and a natural full bust (silicone, Russian size 4, D cup)',
-    'margo_01': 'a curvy soft hourglass build with a wasp waist, round lifted hips and a natural full bust (silicone, Russian size 4, D cup)',
-    'alya_01': 'a curvy fit hourglass build with a wasp waist, wide round hips, a big round perky butt and a natural full bust (silicone, Russian size 4, D cup)',
-    'yuki_01': 'a curvy fit hourglass build with a wasp waist, wide round hips, a big round perky butt and a natural full bust (silicone, Russian size 4, D cup)',
-    'miko_01': 'a voluptuous fit hourglass build with a wasp waist, round lifted wide hips and a full bust (silicone, Russian size 5, E cup)',
-    'rin_01': 'a curvy fit hourglass build with a wasp waist, wide round hips, a big round perky butt and a natural full bust (silicone, Russian size 4, D cup)',
-    'hana_01': 'a very voluptuous soft hourglass build with a narrow waist, a soft belly, very wide round hips, thick soft thighs and an enormous heavy bust (silicone, Russian size 7, F cup)',
-    'vlada_01': 'a curvy hourglass build with a narrow waist, round lifted hips and a full bust (silicone, Russian size 4, D cup)',
-    'milana_01': 'a very voluptuous hourglass build with a narrow waist, wide round hips and a large full bust (silicone, Russian size 6, F cup)',
-    'polina_01': 'a toned tanned hourglass build with a narrow waist, round lifted hips and a natural modest bust (silicone, Russian size 3, C cup)',
-    'dasha_01': 'a soft curvy hourglass build with a narrow waist, wide round hips and a very full bust (silicone, Russian size 5, E cup)',
-    'kamila_01': 'a curvy hourglass build with a narrow waist, wide round hips and a large full bust (silicone, Russian size 5, E cup)',
-    'rita_01': 'a feminine fit hourglass build with a narrow waist, round lifted hips and a natural modest bust (silicone, Russian size 3, C cup)',
-    'yulya_01': 'a petite hourglass build with a tiny waist, round full hips and a very large full natural-looking bust (Russian size 6, F cup)',
-    'liza_01': 'a curvy hourglass build with a narrow waist, a big round lifted bottom, wide hips, soft thighs and a full natural bust (Russian size 3, C cup)',
-    'kira_01': 'a slender toned hourglass build with a tiny waist, a soft flat stomach with a navel piercing, narrow hips, long legs and a medium perky bust (Russian size 2, B cup); fine-line tattoos on the arms, hip and thigh, a butterfly tattoo on the collarbone',
-    'agata_01': 'a very voluptuous hourglass build with a tiny cinched waist, wide round hips and a very large full natural-looking bust (Russian size 6, F cup)',
-    'jina_01': 'a curvy hourglass build with a narrow waist, round hips, long legs and a full natural bust (D cup)',
-    'lana_01': 'an extremely voluptuous hourglass build with a very narrow waist, wide round hips and huge, perfectly round, high and firm augmented silicone breast implants (Russian size 8, H cup)',
+    'mark_01': 'a tall lean athletic build with broad shoulders and a flat toned stomach',
+    'maksim_01': 'a strong athletic build with broad shoulders and muscular forearms',
+    'daniil_01': 'a tall lean fit build with broad shoulders',
+    'timur_01': 'a tall powerful muscular build with broad shoulders',
+    'leo_01': 'a lean muscular build with tattooed arms',
+    'minjun_01': 'a slim fit build',
 }
 DEFAULT_FEMALE_BODY_SPEC = (
     'a curvy feminine hourglass build with a wasp waist, round lifted hips '
@@ -937,7 +905,7 @@ def bust_visual_line(body_spec: str) -> str:
 # to push-up wardrobe words, self-touch poses and the body reference. The last
 # lines of a prompt get the most attention, so both pipelines now end with this.
 def bust_lock_line(character_id: str) -> str:
-    if character_id == 'anna_01':
+    if character_id == 'mark_01':
         body_spec = 'a full bust (silicone, Russian size 5, E cup)'
     else:
         try:
@@ -1008,7 +976,7 @@ def _character_identity_lock(character_id: str, seedream: bool = False, expressi
     with an emotion-matched facial expression; None keeps the old behavior.
     """
     from services.photo_expression_service import expression_description
-    if character_id == 'anna_01':
+    if character_id == 'mark_01':
         if seedream:
             return (
                 SEEDREAM_IDENTITY_LOCK,
@@ -2237,7 +2205,7 @@ def _build_prompt(request: PhotoRequest, shot_index: int, seedream: bool = False
     # V3.43.8: inject the character's actual age into the subject lock so
     # the provider sees the real age instead of a universal "twenties" label.
     adult_lock = ADULT_ONLY_LOCK
-    if character_id != 'anna_01':
+    if character_id != 'mark_01':
         try:
             _char = resolve_character(character_id)
             _card = None
@@ -2250,7 +2218,7 @@ def _build_prompt(request: PhotoRequest, shot_index: int, seedream: bool = False
         except Exception:
             _age = 25
         adult_lock = ADULT_ONLY_LOCK.replace('adult woman', f'adult woman, {_age} years old', 1)
-    body_reinforcement = BODY_REINFORCEMENT if (character_id == 'anna_01' and not seedream and request.scene in BODY_REINFORCEMENT_SCENES) else ''
+    body_reinforcement = BODY_REINFORCEMENT if (character_id == 'mark_01' and not seedream and request.scene in BODY_REINFORCEMENT_SCENES) else ''
     figure_note = (
         'Use tasteful fashion fit and waist definition while preserving the underlying slim body proportions. ' if seedream else
         'Use a well-fitted outfit that preserves the person\u2019s physique and proportions. Use a natural everyday pose with the visual focus on the person, outfit and environment. '

@@ -488,9 +488,12 @@ def _character_display_name(character_id: str) -> str:
 
 
 LIBRARY_CHARACTERS = {
-    'anna_01': '👩🏻 Анна',
-    'alena_01': '👱‍♀️ Emily',
-    'maria_01': '💃 Мария',
+    'mark_01': '🏛 Марк',
+    'maksim_01': '👨\u200d🍳 Максим',
+    'daniil_01': '🩺 Даниил',
+    'timur_01': '🖤 Тимур',
+    'leo_01': '📷 Лео',
+    'minjun_01': '🌸 Мин Джун',
 }
 
 LIBRARY_SCENES = [
@@ -981,9 +984,12 @@ def _character_fallback_photo(character_id: str) -> Path | None:
     """Return a canonical face reference image for a character, if available."""
     base = Path(__file__).resolve().parent / 'data' / 'references'
     candidates = {
-        CHARACTER_ID: base / 'anna' / '00_anna_canonical_face_v3.png',
-        'alena_01': base / 'emily' / '00_emily_canonical_face.png',
-        'maria_01': base / 'maria' / '00_maria_canonical_face.png',
+        'mark_01': base / 'mark' / '00_mark_canonical_face.png',
+        'maksim_01': base / 'maksim' / '00_maksim_canonical_face.png',
+        'daniil_01': base / 'daniil' / '00_daniil_canonical_face.png',
+        'timur_01': base / 'timur' / '00_timur_canonical_face.png',
+        'leo_01': base / 'leo' / '00_leo_canonical_face.png',
+        'minjun_01': base / 'minjun' / '00_minjun_canonical_face.png',
     }
     return candidates.get(character_id)
 
@@ -2166,11 +2172,11 @@ async def consent_accept(cq: types.CallbackQuery):
 
 # V3.98.0: the first-minute choice of "his" girl.
 _PICKER_GIRLS = (
-    ('agata_01', '🥀 Агата — нежная готка, шепчет ASMR', '🥀 Agata — tender goth, whispers ASMR'),
-    ('anna_01', '👩🏻 Анна — нежность и страсть', '👩🏻 Anna — tenderness and passion'),
-    ('alisa_01', '📚 Алиса — застенчивая учительница', '📚 Alisa — shy young teacher'),
-    ('kamila_01', '🏎 Камила — горячая южанка', '🏎 Kamila — hot southern racer'),
-    ('rita_01', '🦊 Рита — рыжая хохотушка', '🦊 Rita — red-haired tease'),
+    ('mark_01', '🏛 Марк — спокойный и заботливый', '🏛 Mark — calm and caring'),
+    ('maksim_01', '👨\u200d🍳 Максим — тёплый и весёлый', '👨\u200d🍳 Maksim — warm and funny'),
+    ('daniil_01', '🩺 Даниил — сдержанный хирург', '🩺 Daniil — reserved surgeon'),
+    ('timur_01', '🖤 Тимур — властный и уверенный', '🖤 Timur — dominant and confident'),
+    ('leo_01', '📷 Лео — дерзкий плохой парень', '📷 Leo — bold bad boy'),
 )
 _first_hello_done: set[int] = set()
 
@@ -2344,7 +2350,7 @@ def _first_hello(character_id: str, first_name: str, lang: str) -> str:
     # The default heroine has hand-written openers; any other character opens
     # with a neutral line under her own name so the persona never breaks.
     n = (', ' + first_name.strip()[:32]) if first_name and first_name.strip() else ''
-    if character_id == 'anna_01':
+    if character_id == 'mark_01':
         pool = _FIRST_HELLO_EN if lang == EN else _FIRST_HELLO_RU
         return random.choice(pool).format(n=n)
     who = _character_display_name(character_id)
@@ -2558,7 +2564,7 @@ async def character_view(cq: types.CallbackQuery):
 @dp.callback_query(F.data == 'character:anna')
 async def character_anna(cq: types.CallbackQuery):
     await cq.answer()
-    await _send_character_card(cq.message.chat.id, 'anna_01', viewer_id=cq.from_user.id)
+    await _send_character_card(cq.message.chat.id, 'mark_01', viewer_id=cq.from_user.id)
 
 
 @dp.callback_query(F.data == 'character:alena_soon')
@@ -2566,7 +2572,7 @@ async def character_alena_soon(cq: types.CallbackQuery):
     uid = ensure_user(cq.from_user.id, cq.from_user.first_name, language_code=cq.from_user.language_code)
     track_event(uid, 'fake_door_click', metadata={'feature': 'alena_character_card'})
     await cq.answer()
-    await _send_character_card(cq.message.chat.id, 'alena_01', viewer_id=cq.from_user.id)
+    await _send_character_card(cq.message.chat.id, 'maksim_01', viewer_id=cq.from_user.id)
 
 
 @dp.message(Command('admin'))

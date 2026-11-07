@@ -47,7 +47,7 @@ async def react_to_photo(
     *,
     mime_type: str = 'image/jpeg',
     caption: str | None = None,
-    character_id: str = 'anna_01',
+    character_id: str = 'mark_01',
 ) -> str | None:
     """Return an in-character reaction to the photo, or None when unavailable.
 

@@ -105,7 +105,7 @@ def _has_event_since(session, uid: int, name: str, since: datetime) -> bool:
 
 def mark(uid: int, event: str, character_id: str, product: str = '') -> None:
     with SessionLocal() as s:
-        s.add(ProductEvent(user_id=uid, character_id=character_id or 'anna_01', event_name=event,
+        s.add(ProductEvent(user_id=uid, character_id=character_id or 'mark_01', event_name=event,
                            metadata_json='{"product": "%s"}' % product if product else '{}', created_at=_now()))
         s.commit()
 

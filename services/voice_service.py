@@ -43,137 +43,81 @@ VALID_VOICES = tuple(_EDGE_VOICE_MAP.keys())
 # Each girl has her own voice; the language is picked from the text itself
 # (user writes Russian → Russian voice, English → English voice).
 CHARACTER_VOICE_PROFILES = {
-    'anna_01': {
-        'ru': ('ru-RU-SvetlanaNeural', {'rate': '+3%', 'pitch': '+2Hz'}),
-        'en': ('en-US-AriaNeural', {'rate': '+2%', 'pitch': '+2Hz'}),
+    'mark_01': {
+        'ru': ('ru-RU-DmitryNeural', {'rate': '+0%', 'pitch': '+0Hz'}),
+        'en': ('en-US-ChristopherNeural', {'rate': '+0%', 'pitch': '+0Hz'}),
     },
-    'alena_01': {
-        'ru': ('ru-RU-DariyaNeural', {'rate': '+4%', 'pitch': '+3Hz'}),
-        'en': ('en-US-JennyNeural', {'rate': '+3%', 'pitch': '+2Hz'}),
+    'maksim_01': {
+        'ru': ('ru-RU-DmitryNeural', {'rate': '+0%', 'pitch': '+0Hz'}),
+        'en': ('en-US-AndrewNeural', {'rate': '+0%', 'pitch': '+0Hz'}),
     },
-    'maria_01': {
-        'ru': ('ru-RU-SvetlanaNeural', {'rate': '+1%', 'pitch': '+7Hz'}),
-        'en': ('en-US-MichelleNeural', {'rate': '+1%', 'pitch': '+4Hz'}),
+    'daniil_01': {
+        'ru': ('ru-RU-DmitryNeural', {'rate': '+0%', 'pitch': '+0Hz'}),
+        'en': ('en-US-BrianNeural', {'rate': '+0%', 'pitch': '+0Hz'}),
+    },
+    'timur_01': {
+        'ru': ('ru-RU-DmitryNeural', {'rate': '+0%', 'pitch': '+0Hz'}),
+        'en': ('en-US-GuyNeural', {'rate': '+0%', 'pitch': '+0Hz'}),
+    },
+    'leo_01': {
+        'ru': ('ru-RU-DmitryNeural', {'rate': '+0%', 'pitch': '+0Hz'}),
+        'en': ('en-US-EricNeural', {'rate': '+0%', 'pitch': '+0Hz'}),
+    },
+    'minjun_01': {
+        'ru': ('ru-RU-DmitryNeural', {'rate': '+0%', 'pitch': '+0Hz'}),
+        'en': ('en-US-RogerNeural', {'rate': '+0%', 'pitch': '+0Hz'}),
     },
 }
 # V3.31.8: constructor personas get their own voice profile. Before this,
 # a custom character fell back to _DEFAULT_VOICE_PROFILE — Anna's exact
 # voice — so her date/gift voice notes literally sounded like Anna.
 CUSTOM_CHARACTER_VOICE_PROFILE = {
-    'ru': ('ru-RU-DariyaNeural', {'rate': '+6%', 'pitch': '+0Hz'}),
-    'en': ('en-US-JennyNeural', {'rate': '+6%', 'pitch': '+0Hz'}),
+    'ru': ('ru-RU-DmitryNeural', {'rate': '+3%', 'pitch': '+0Hz'}),
+    'en': ('en-US-GuyNeural', {'rate': '+3%', 'pitch': '+0Hz'}),
 }
 # V3.63.8: 'Erin' is not a Gemini prebuilt voice (Erinome is) — every custom
 # girl's TTS 400'd and fell back to the robotic edge voice. Custom girls now
 # draw a stable voice from the female pool by their id.
 CUSTOM_CHARACTER_GEMINI_TTS_VOICE = ''
-_DEFAULT_VOICE_PROFILE = CHARACTER_VOICE_PROFILES['anna_01']
+_DEFAULT_VOICE_PROFILE = CHARACTER_VOICE_PROFILES['mark_01']
 
 # ── Gemini 2.5 TTS prebuilt voices (V3.20.1): one cute female voice per girl ─
 # V3.63.8: only three girls were mapped, so the other 14 all spoke as Anna
 # (Leda). Every girl now has her own voice and her own manner of speaking.
 GEMINI_TTS_VOICES = {
-    'anna_01': 'Leda',
-    'alena_01': 'Kore',
-    'maria_01': 'Aoede',
-    'alisa_01': 'Autonoe',  # V3.63.10: Vindemiatrix sounded rough and old («как у сорокалетней»)
-    'darina_01': 'Achernar',
-    'erika_01': 'Aoede',  # V3.63.11: Gacrux sounded «стрёмно»
-    'eva_01': 'Autonoe',
-    'kate_01': 'Erinome',
-    'kristina_01': 'Despina',
-    'mila_01': 'Callirrhoe',
-    'rex_01': 'Pulcherrima',
-    'romina_01': 'Callirrhoe',
-    'sasha_01': 'Zephyr',
-    'sonya_01': 'Laomedeia',
-    'veronika_01': 'Sulafat',
-    'vika_01': 'Kore',
-    'violetta_01': 'Despina',
-    'zlata_01': 'Zephyr',
-    'lera_01': 'Laomedeia',
-    'diana_01': 'Kore',
-    'nika_01': 'Sulafat',
-    'ksyusha_01': 'Zephyr',
-    'margo_01': 'Pulcherrima',
-    'alya_01': 'Callirrhoe',
-    'yuki_01': 'Laomedeia',
-    'miko_01': 'Erinome',
-    'rin_01': 'Despina',
-    'hana_01': 'Sulafat',
-    'vlada_01': 'Erinome',
-    'milana_01': 'Pulcherrima',
-    'polina_01': 'Laomedeia',
-    'dasha_01': 'Sulafat',
-    'kamila_01': 'Callirrhoe',
-    'rita_01': 'Zephyr',
-    'yulya_01': 'Leda',
-    'liza_01': 'Aoede',
-    'kira_01': 'Despina',
-    'agata_01': 'Achernar',
-    'jina_01': 'Autonoe',
-    'lana_01': 'Sulafat',
+    'mark_01': 'Algieba',
+    'maksim_01': 'Achird',
+    'daniil_01': 'Iapetus',
+    'timur_01': 'Orus',
+    'leo_01': 'Algenib',
+    'minjun_01': 'Umbriel',
 }
 GEMINI_FEMALE_VOICES = (
-    'Leda', 'Kore', 'Aoede', 'Achernar', 'Autonoe',
-    'Erinome', 'Despina', 'Callirrhoe', 'Pulcherrima', 'Zephyr', 'Laomedeia', 'Sulafat',
+    'Algieba', 'Achird', 'Iapetus', 'Orus', 'Algenib', 'Umbriel',
+    'Puck', 'Charon', 'Fenrir', 'Enceladus', 'Schedar', 'Sadachbia',
 )
 _CUSTOM_VOICE_POOL = GEMINI_FEMALE_VOICES
 # How she talks — added to the style direction so girls sharing a voice still
 # sound like different women.
 GEMINI_TTS_MANNER = {
-    'anna_01': 'playful and sociable, ',
-    'alena_01': 'bright, confident and teasing, ',
-    'maria_01': 'very gentle, caring and a little breathy, ',
-    'alisa_01': 'young and light-voiced, quiet, thoughtful and a bit shy, ',
-    'darina_01': 'soft, homely and caring, ',
-    'erika_01': 'elegant, warm and self-assured, with a soft smile, ',
-    'eva_01': 'cheerful, simple and energetic, ',
-    'kate_01': 'direct, sporty and sensual, ',
-    'kristina_01': 'lazy, low and sultry, like late at night, ',
-    'mila_01': 'cosy and warm with a little mischief, ',
-    'rex_01': 'commanding, slow and mysterious, ',
-    'romina_01': 'sensual, relaxed and playful, ',
-    'sasha_01': 'bright, modern and flirty, ',
-    'sonya_01': 'lively, giggly and spontaneous, ',
-    'veronika_01': 'mature, deep and caring, ',
-    'vika_01': 'charismatic, firm and demanding, ',
-    'violetta_01': 'glamorous, smooth and a little ironic, ',
-    'zlata_01': 'cheeky, energetic and impressionable, ',
-    'lera_01': 'soft, warm and a little shy, a little breathless, ',
-    'diana_01': 'sharp, mocking and confident, ',
-    'nika_01': 'calm, low and confident, a little teasing, ',
-    'ksyusha_01': 'bright, flirty and purring, ',
-    'margo_01': 'warm, smooth and self-assured, ',
-    'alya_01': 'lively, expressive and a little grumpy, ',
-    'yuki_01': 'sweet, playful and teasing, ',
-    'miko_01': 'bright, confident and playful, ',
-    'rin_01': 'calm, low and a little sultry, ',
-    'hana_01': 'calm, warm and a little husky, like a doctor who enjoys teasing, ',
-    'vlada_01': 'bright, cheeky and teasing, with a smirk in the voice, ',
-    'milana_01': 'cool, smooth and elegant, a little haughty, ',
-    'polina_01': 'sleepy, soft and tender, with a lazy smile, ',
-    'dasha_01': 'quiet, low and ironic, unhurried, ',
-    'kamila_01': 'hot, fast and bold, with a warm southern energy, ',
-    'rita_01': 'bright, giggly and playful, ',
-    'yulya_01': 'sweet, playful and purring, with a giggle, ',
-    'liza_01': 'soft, breathy and shy, with a sly smile, ',
-    'kira_01': 'low, smoky and confident, with a teasing smirk, ',
-    'agata_01': 'soft, breathy and tender, a slow intimate whisper, ',
-    'jina_01': 'bright, bubbly and teasing, with a playful laugh in her voice, ',
-    'lana_01': 'low, velvety and confident, with a slow knowing smile, ',
+    'mark_01': 'calm, warm and grown-up, ',
+    'maksim_01': 'warm, friendly and smiling, ',
+    'daniil_01': 'low, calm and reserved, ',
+    'timur_01': 'low, slow, commanding and confident, ',
+    'leo_01': 'husky, teasing and a bit lazy, ',
+    'minjun_01': 'soft, gentle and a little shy, ',
 }
-_DEFAULT_GEMINI_TTS_VOICE = GEMINI_TTS_VOICES['anna_01']
+_DEFAULT_GEMINI_TTS_VOICE = GEMINI_TTS_VOICES['mark_01']
 
 # V3.74.0: Grok has two multilingual female voices; the owner liked both.
 # eve — lighter and playful; ara — calmer and lower, for the mature girls.
 GROK_ARA_CHARACTERS = frozenset({
-    'maria_01', 'darina_01', 'erika_01', 'kristina_01', 'rex_01', 'veronika_01', 'violetta_01', 'nika_01', 'margo_01', 'rin_01', 'milana_01',
+    'mark_01', 'daniil_01', 'timur_01',
 })
 
 
 def grok_voice_for(character_id: str | None) -> str:
-    return 'ara' if (character_id or '') in GROK_ARA_CHARACTERS else 'eve'
+    return 'rex' if (character_id or '') in GROK_ARA_CHARACTERS else 'leo'
 
 # V3.25.0: Google rotates TTS model names (2.5 preview was superseded by the
 # 3.1 preview).  Walk the chain on 404/400 so the human-like voice survives

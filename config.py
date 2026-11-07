@@ -298,9 +298,9 @@ GEMINI_IMAGE_ESTIMATED_COST_USD = float(os.getenv("GEMINI_IMAGE_ESTIMATED_COST_U
 GEMINI_IMAGE_ASPECT_RATIO = os.getenv("GEMINI_IMAGE_ASPECT_RATIO", "3:4").strip()
 GEMINI_IMAGE_SIZE = os.getenv("GEMINI_IMAGE_SIZE", "1K").strip()
 
-CHARACTER_ID = os.getenv("CHARACTER_ID", "anna_01")
+CHARACTER_ID = os.getenv("CHARACTER_ID", "mark_01")
 CHARACTER_DIR = Path(os.getenv("CHARACTER_DIR", str(BASE_DIR / "data" / "characters")))
-CHARACTER_FILE = os.getenv("CHARACTER_FILE", str(CHARACTER_DIR / "anna.json"))
+CHARACTER_FILE = os.getenv("CHARACTER_FILE", str(CHARACTER_DIR / "mark_01.json"))
 
 # ── Image generation: fal/Seedream only (V3.44.19); OpenAI leg optional ─────
 # V3.44.19 owner rule: «фото через fal.ai, OpenRouter — только общение».

@@ -8,7 +8,7 @@ DNA_DIR = Path(BASE_DIR) / 'data' / 'characters'
 
 @lru_cache(maxsize=8)
 def get_character_dna(character_id: str = CHARACTER_ID) -> dict:
-    name = 'anna_dna.json' if character_id == 'anna_01' else f'{character_id}_dna.json'
+    name = 'anna_dna.json' if character_id == 'mark_01' else f'{character_id}_dna.json'
     path = DNA_DIR / name
     if not path.exists():
         return {}
