@@ -915,3 +915,9 @@ if not _has_llm:
     raise RuntimeError(
         "No LLM provider configured. Set OPENEROUTER_API_KEY, GEMINI_API_KEY, or OPENAI_API_KEY."
     )
+
+
+# anb-2 (male heroes): heroes have no canonical faces yet (stage 4), so hero
+# photos, «Раздеть», studio video and the «Дом» rooms stay off until the faces
+# are made. Set HERO_PHOTOS_ENABLED=true after the faces land.
+HERO_PHOTOS_ENABLED = os.getenv("HERO_PHOTOS_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}

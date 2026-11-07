@@ -160,6 +160,9 @@ def replace_values(path: str, names: dict[str, callable]) -> None:
 
 
 def write_characters():
+    if not (CHAR_DIR / 'vlada_01.json').exists():
+        print('characters already installed')
+        return
     template = json.loads((CHAR_DIR / 'vlada_01.json').read_text(encoding='utf-8'))
     for cid, h in HEROES.items():
         d = json.loads(json.dumps(template))

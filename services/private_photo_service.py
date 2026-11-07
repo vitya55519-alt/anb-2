@@ -111,7 +111,7 @@ PRIVATE_PHOTO_CATEGORIES = {
             {"id": "shower_silhouette", "name_ru": "🚿 Душ вдвоём", "name_en": "🚿 Shared shower"},
             {"id": "private_dance", "name_ru": "💃 Приватный танец", "name_en": "🎭 Private dance"},
             {"id": "photoshoot", "name_ru": "📸 Фотосессия", "name_en": "📸 Photoshoot"},
-            {"id": "rain", "name_ru": "🌧️ Промокла под дождём", "name_en": "🌧️ Got wet"},
+            {"id": "rain", "name_ru": "🌧️ Промок под дождём", "name_en": "🌧️ Got wet"},
             {"id": "lazy_sunday", "name_ru": "🛏️ Ленивое воскресенье", "name_en": "🛏️ Lazy Sunday"},
             {"id": "movie", "name_ru": "🎬 Кино вдвоём", "name_en": "🎬 Movie together"},
             {"id": "wine", "name_ru": "🍷 Вечер с вином", "name_en": "Wine tasting"},
@@ -130,9 +130,9 @@ PRIVATE_PHOTO_CATEGORIES = {
             {"id": "shorts", "name_ru": "🩳 Шортики и топ", "name_en": "Short shorts + top"},
             {"id": "wet", "name_ru": "💦 Мокрая футболка", "name_en": "Wet t-shirt"},
             # V3.60.1: owner's «подняла топ / спустила топ — видно бюстгальтер».
-            {"id": "top_up", "name_ru": "👚 Подняла топ", "name_en": "Lifted top",
+            {"id": "top_up", "name_ru": "👚 Поднял топ", "name_en": "Lifted top",
              "prompt": "she pulls her tight thin top up with one hand to just above her bra, her bra fully visible underneath, flat stomach, playful look into the camera; jeans or a fitted skirt below"},
-            {"id": "top_down", "name_ru": "😈 Спустила топ", "name_en": "Top pulled down",
+            {"id": "top_down", "name_ru": "😈 Спустил топ", "name_en": "Top pulled down",
              "prompt": "the strap of her top has slipped off one shoulder and she tugs the neckline down so one cup of her bra and its strap show, teasing half-smile"},
             {"id": "open_shirt", "name_ru": "🔓 Расстёгнутая рубашка", "name_en": "Unbuttoned shirt",
              "prompt": "a fitted shirt unbuttoned halfway, the bra clearly visible between the open sides, one hand on the collar"},
@@ -141,7 +141,7 @@ PRIVATE_PHOTO_CATEGORIES = {
         ]
     },
     "fully_nude": {
-        "name_ru": "🔥 Полностью обнажённая",
+        "name_ru": "🔥 Полностью обнажённый",
         "name_en": "Fully nude",
         "peach_cost": 4 * PEACH_SCALE,  # V3.65.0: ×100 peaches
         "types": [
@@ -175,7 +175,7 @@ COSPLAY_CHARACTERS = [
     {"id": "mai", "name": "👘 Май ШираНуи (KOF)", "hair": "long black hair in high ponytail", "outfit": "red and white sleeveless kunoichi outfit with deep cleavage opening, short skirt", "accessories": "large white fan, red hair ornaments"},
     {"id": "harley", "name": "🃏 Харли Квинн (DC)", "hair": "twin pigtails — one pink, one blue", "outfit": "red and black diamond-pattern corset, red and black hot-pants, mismatched thigh-high stockings", "accessories": "black choker with PUDDIN text, baseball bat"},
     {"id": "black_widow", "name": "🖤 Чёрная Вдова (Marvel)", "hair": "short red hair", "outfit": "black skin-tight catsuit with deep V-neckline and zipper front", "accessories": "black wrist gauntlets, utility belt"},
-    {"id": "wonder_woman", "name": "⚡ Чудо-женщина (DC)", "hair": "long black wavy hair", "outfit": "red corset with golden eagle emblem, blue mini skirt with white stars, red and gold boots", "accessories": "golden tiara with red star, silver bracelets, golden lasso on hip"},
+    {"id": "wonder_woman", "name": "⚡ Чудо-мужчина (DC)", "hair": "long black wavy hair", "outfit": "red corset with golden eagle emblem, blue mini skirt with white stars, red and gold boots", "accessories": "golden tiara with red star, silver bracelets, golden lasso on hip"},
     {"id": "triss", "name": "💋 Трисс (The Witcher)", "hair": "long wavy auburn/red hair", "outfit": "deep blue velvet dress with extremely low neckline and thigh-high slit", "accessories": "none"},
     {"id": "yennefer", "name": "🖤 Йеннифэр (The Witcher)", "hair": "long black curly hair", "outfit": "black and white dress with tight corset, long sleeves, thigh-high slit", "accessories": "black choker with small pendant"},
     {"id": "aloy", "name": "🏹 Элой (Horizon)", "hair": "red hair in thick braid with small braids around", "outfit": "blue and tan tribal outfit with leather corset, short skirt, leg wraps", "accessories": "blue focus device on temple, bow on back, face paint stripes"},
@@ -789,6 +789,10 @@ async def _spicyapi_render(model: str, prompt: str, image_urls: Optional[List[st
     V3.61.12: ``breaker=False`` (a button the user pressed and waits on, like
     «Раздеть») neither skips on an open breaker nor counts toward it — one
     girl's refused edit must not block every other girl for 15 minutes."""
+    from config import HERO_PHOTOS_ENABLED
+    if not HERO_PHOTOS_ENABLED:
+        logger.info('SpicyAPI image skipped: hero photos are off scene=%s', scene)
+        return (None, None) if return_url else None
     if not breaker:
         return await _spicyapi_render_once(model, prompt, image_urls, scene, return_url=return_url)
     if spicyapi_breaker_open(model, image_urls):
@@ -1217,12 +1221,12 @@ async def send_daily_gift(telegram_id: int, bot) -> bool:
     await bot.send_photo(
         chat_id=telegram_id,
         photo=BufferedInputFile(data, filename='daily_gift.jpg'),
-        caption='🎁 Я скучала... вот, держи 💋',
+        caption='🎁 Я скучал... вот, держи 💋',
     )
     # V3.61.8: the gift also shows up in her chat inside the Mini App.
     try:
         from services.scheduler_service import _to_app_chat
-        _to_app_chat(uid, telegram_id, gift_char, '🎁 Я скучала... вот, держи 💋', shot)
+        _to_app_chat(uid, telegram_id, gift_char, '🎁 Я скучал... вот, держи 💋', shot)
     except Exception:
         logger.exception('daily gift app-chat persist failed user=%s', telegram_id)
     with SessionLocal() as session:
@@ -1270,10 +1274,10 @@ async def generate_voice_photo_combo(
     # Генерируем голосовое сообщение через MiniMax TTS
     voice_phrases = [
         "Это только для тебя... ",
-        "Я скучала по тебе... ",
+        "Я скучал по тебе... ",
         "Хочешь ещё?.. ",
         "Тебе нравится?.. ",
-        "Я рада тебя видеть... ",
+        "Я рад тебя видеть... ",
     ]
     import random
     phrase = random.choice(voice_phrases)

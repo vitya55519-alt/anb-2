@@ -330,7 +330,7 @@ async def synthesize_bytes(text: str, voice: str | None = None, character_id: st
 
 
 _SPICY_GEMINI_BASE = {
-    'ru': ('Молодая девушка записывает голосовое сообщение близкому мужчине. Живая разговорная '
+    'ru': ('Молодой парень записывает голосовое сообщение близкой женщине. Живая разговорная '
            'русская речь, близко к микрофону, с улыбкой, в естественном темпе; не диктор и не робот. '),
     'en': ('A young woman recording a quick voice message to a man she is close to: lively, natural, '
            'close to the microphone, with a smile, never like an announcer or a robot. '),
@@ -341,7 +341,7 @@ _SPICY_GEMINI_BASE = {
 # (owner: «мягкое, человеческое, сексуальное»).
 _SPICY_GEMINI_MOOD = {
     'evening': {
-        'ru': ('Поздний вечер, она уже лежит в постели и записывает ему голосовое перед сном: говорит '
+        'ru': ('Поздний вечер, он уже лежит в постели и записывает ей голосовое перед сном: говорит '
                'тихо, мягко и медленно, близко-близко к микрофону, с тёплой лёгкой хрипотцой и '
                'придыханием, чуть игриво и соблазнительно, с паузами и улыбкой в голосе. '),
         'en': ('Late evening, she is already in bed recording him a voice note before sleep: quiet, soft '

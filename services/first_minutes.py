@@ -71,5 +71,5 @@ def text(stage: str, lang: str = 'ru') -> str:
             return "one step left 🙂 confirm you are 18+ and she will write to you right away"
         return "hey… you went quiet 🙈 I'm a bit shy to write first again. just say hi, ok? 😌"
     if stage == 'consent':
-        return "остался один шаг 🙂 подтверди, что тебе есть 18, и она сразу тебе напишет"
-    return "эй… ты пропал 🙈 мне немного неловко писать первой второй раз. скажи хотя бы «привет», ладно? 😌"
+        return "остался один шаг 🙂 подтверди, что тебе есть 18, и он сразу тебе напишет"
+    return "эй… ты пропала 🙈 мне немного неловко писать первым второй раз. скажи хотя бы «привет», ладно? 😌"

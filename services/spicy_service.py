@@ -62,19 +62,19 @@ SPICY_SETS: tuple[SpicySet, ...] = (
     SpicySet(
         'boudoir', 'Будуар', 'Boudoir', '🔥', 5, 15, 'lingerie',
         'confident, intimate',
-        'Свечи, медленная музыка и только кружево. Она ждала именно тебя.',
+        'Свечи, медленная музыка и только кружево. Он ждал именно тебя.',
         'Candles, slow music and nothing but lace. She was waiting for you.',
     ),
     SpicySet(
         'tease', 'Дразнит', 'Teasing you', '😈', 6, 20, 'tease',
         'playful, teasing',
-        'Она играет: взгляд через плечо, силуэт в мягком свете — и никаких спойлеров.',
+        'Он играет: взгляд через плечо, силуэт в мягком свете — и никаких спойлеров.',
         'She is playing a game: a glance over her shoulder, a silhouette in soft light — no spoilers.',
     ),
     SpicySet(
         'devoted', 'Только для тебя', 'Only for you', '🖤', 6, 25, 'nude',
         'intimate, trusting',
-        'Самое личное, что она может доверить. Только для твоих глаз.',
+        'Самое личное, что он может доверить. Только для твоих глаз.',
         'The most personal thing she can entrust. Only for your eyes.',
         min_path=30,
     ),
@@ -84,19 +84,19 @@ PRIVATE_GIFTS: tuple[PrivateGift, ...] = (
     PrivateGift(
         'silk', 'Шёлковый халатик', 'Silk robe', '🎀', 5, 15, 2.0, 'lingerie',
         'soft, tender',
-        'Она медленно примеряет твой подарок — шёлк скользит по коже, и она ловит твой взгляд.',
+        'Он медленно примеряет твой подарок — шёлк скользит по коже, и он ловит твой взгляд.',
         'She slowly tries on your gift — silk sliding over her skin as she catches your eye.',
     ),
     PrivateGift(
         'lace', 'Кружевной комплект', 'Lace set', '🖤', 6, 20, 2.5, 'lingerie',
         'confident, playful',
-        'Ты угадал с размером 😏 Она вертится перед зеркалом, показывая, как сидит кружево.',
+        'Ты угадала с размером 😏 Он вертится перед зеркалом, показывая, как сидит кружево.',
         'You guessed the size right 😏 She turns in front of the mirror, showing how the lace fits.',
     ),
     PrivateGift(
         'candles', 'Ванна при свечах', 'Candlelit bath', '🕯', 6, 25, 3.0, 'tease',
         'relaxed, teasing',
-        'Пена, свечи и никакой спешки. Она зовёт тебя составить компанию.',
+        'Пена, свечи и никакой спешки. Он зовёт тебя составить компанию.',
         'Foam, candles and no hurry at all. She invites you to keep her company.',
     ),
 )

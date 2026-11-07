@@ -225,7 +225,7 @@ PHOTO_LABELS = {
     'personal': '💌 Только для тебя',
     'lingerie': '🖤 В кружевном белье',
     'private_fashion': '🔐 Будуар',
-    'nude': '🔥 Обнажённая',
+    'nude': '🔥 Обнажённый',
     'tease': '🍑 Дразнит',
 }
 
@@ -484,7 +484,7 @@ def _character_display_name(character_id: str) -> str:
             return card.display_name
     except Exception:
         pass
-    return 'Анна'
+    return 'Марк'
 
 
 LIBRARY_CHARACTERS = {
@@ -609,21 +609,21 @@ def abilities_text(lang: str = RU) -> str:
         )
     return (
         '✨ Что умеет бот\n\n'
-        '💬 живое общение с характером — она запоминает контекст и со временем подстраивается под твою манеру общения\n'
+        '💬 живое общение с характером — он запоминает контекст и со временем подстраивается под твою манеру общения\n'
         '❤️ отношения развиваются по уровням 1–10: с каждым уровнем общение и образы становятся ближе и откровеннее; на 3-м ты выбираешь путь романтики или страсти (7–10 — плато для Premium)\n'
         '🎯 интерактивные истории: твой первый выбор становится каноном, а альтернативные ветки можно посмотреть позже\n'
-        '📸 фото прямо в чате: напиши «скинь фото» или «хочу тебя увидеть» — она пришлёт свежий кадр по ситуации; иногда предлагает сама во время флирта\n'
+        '📸 фото прямо в чате: напиши «скинь фото» или «хочу тебя увидеть» — он пришлёт свежий кадр по ситуации; иногда предлагает сам во время флирта\n'
         '🎬 кнопка «Оживить фото» под каждым снимком — короткое AI-видео из любого фото (Premium: 2 бесплатно в день)\n'
-        '🎥 кружочки — видео-кружочки «от неё» с её голосом (за 🍑)\n'
-        '🎯 задание дня — маленькая просьба от неё каждый день, выполнение даёт очки внимания\n'
-        '🏠 квартира: заходи в комнаты, проводи с ней время — новые комнаты открываются с уровнями отношений\n'
-        '💕 свидания: пригласи её куда-нибудь, а после она пришлёт фото с прогулки\n'
+        '🎥 кружочки — видео-кружочки «от него» с его голосом (за 🍑)\n'
+        '🎯 задание дня — маленькая просьба от него каждый день, выполнение даёт очки внимания\n'
+        '🏠 квартира: заходи в комнаты, проводи с ним время — новые комнаты открываются с уровнями отношений\n'
+        '💕 свидания: пригласи его куда-нибудь, а после он пришлёт фото с прогулки\n'
         '🎁 подарки: приятные сюрпризы, которые сближают\n'
         '🎙 голосовые ответы: у каждой девушки свой милый голос, отвечает на твоём языке\n'
         '🖼 коллекция открытых фотографий по уровням отношений\n'
-        '💌 она иногда может написать первой и вернуться к незаконченной теме\n'
-        '⏰ будильник: напиши «разбуди в 8:00» — она разбудит тебя голосом. Первый раз бесплатно, дальше будильник и напоминания — с Premium\n\n'
-        '🎯 Первая история уже доступна — можешь начать её сразу или просто написать мне.'
+        '💌 он иногда может написать первым и вернуться к незаконченной теме\n'
+        '⏰ будильник: напиши «разбуди в 8:00» — он разбудит тебя голосом. Первый раз бесплатно, дальше будильник и напоминания — с Premium\n\n'
+        '🎯 Первая история уже доступна — можешь начать его сразу или просто написать мне.'
     )
 
 
@@ -794,7 +794,7 @@ def _admin_path_text(telegram_id: int) -> tuple[str, InlineKeyboardMarkup]:
     side = 'страсть 🔥' if axis >= 20 else ('нежность 💗' if axis <= -20 else 'равновесие ⚖️')
     text = (f'🔥💗 Твой путь с {name}: {axis:+.0f} ({side})\n\n'
             'От +20 и выше включаются откровенные позы и мимика на всех фото этой девушки. '
-            'Меняется только твой путь с выбранной сейчас девушкой.')
+            'Меняется только твой путь с выбранной сейчас парнем.')
     rows = [[InlineKeyboardButton(text=label, callback_data=f'admin:pathset:{value}')]
             for label, value in ADMIN_PATH_PRESETS]
     rows.append([InlineKeyboardButton(text='⬅️ Админка', callback_data='admin:home')])
@@ -1249,7 +1249,7 @@ def premium_pitch_text(telegram_id: int) -> str:
             '• 🎥 видео-кружочки от меня — за 🍑',
             '• 🎙 голосовые ответы — только для Premium',
             '• 💋 уровни 7–10 отношений — вершина пути романтики или страсти',
-            '• 🎚 любой уровень общения 1–10 — выбираешь сам, в панели уровня в чате',
+            '• 🎚 любой уровень общения 1–10 — выбираешь сама, в панели уровня в чате',
             '• 2 бесплатных replay альтернативных квест-веток в месяц',
             '• больше памяти, инициативы и утренних/вечерних сообщений',
         ]
@@ -1500,7 +1500,7 @@ def premium_keyboard(discount: dict | None = None, telegram_id: int | None = Non
                                f'🪙 {TOKEN_PACK_SIZE} токенов — {TOKEN_PACK_SIZE * TOKEN_PRICE_RUB} ₽'),
             ])
     rows.append([video_button])
-    rows.append([InlineKeyboardButton(text=f'🎥 Кружочек от неё — {peach_num(CIRCLE_PEACH_COST)} 🍑', callback_data='video:circle')])
+    rows.append([InlineKeyboardButton(text=f'🎥 Кружочек от него — {peach_num(CIRCLE_PEACH_COST)} 🍑', callback_data='video:circle')])
     rows.append([InlineKeyboardButton(text='🔒 📞 Звонок с персонажем · скоро', callback_data='future:anna_call')])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -1828,7 +1828,7 @@ async def _run_photo_background(chat_id: int, telegram_id: int, request: PhotoRe
         track_event(uid, 'photo_failed', metadata={'scene': request.scene, 'reason': 'total_timeout', 'provider': 'timeout'})
         if await _maybe_refund_paid_photo(chat_id, telegram_id, charge, amount, product):
             return
-        await bot.send_message(chat_id, 'фото делалось слишком долго, я остановила 😕 лимит не списан. попробуй ещё раз.', reply_markup=photo_retry_keyboard(request.scene))
+        await bot.send_message(chat_id, 'фото делалось слишком долго, я остановил 😕 лимит не списан. попробуй ещё раз.', reply_markup=photo_retry_keyboard(request.scene))
     except Exception as exc:
         logger.exception('photo generation failed user=%s', telegram_id)
         track_event(uid, 'photo_failed', metadata={'scene': request.scene, 'reason': type(exc).__name__, 'provider': 'unknown'})
@@ -2061,7 +2061,7 @@ async def start(message: types.Message, command: CommandObject):
                 '⬇️ Поехали! ⬇️\n\n'
             )
             if has_referral:
-                welcome += f'пришёл по приглашению друга — напиши ей {REFERRAL_QUALIFY_MESSAGES} сообщений, и вам обоим капнет по {REFERRAL_INVITEE_CREDITS} 🍑.\n'
+                welcome += f'пришёл по приглашению друга — напиши ему {REFERRAL_QUALIFY_MESSAGES} сообщений, и вам обоим капнет по {REFERRAL_INVITEE_CREDITS} 🍑.\n'
             welcome += 'Подтверди, что тебе 18+, и прими условия использования и политику конфиденциальности.'
         banner = _welcome_banner_file()
         if banner is not None:
@@ -2138,8 +2138,8 @@ async def consent_accept(cq: types.CallbackQuery):
         bonus_line = (
             f'🎁 добро пожаловать! подарил тебе {first_start["credits"]} фото-кредитов — '
             'попробуй первое фото бесплатно.\n'
-            'Все героини, чаты, картинки и магазин — в приложении 👇'
-        ) if first_start['credits'] else 'Добро пожаловать 🙂 все героини, чаты и магазин — в приложении 👇'
+            'Все герои, чаты, картинки и магазин — в приложении 👇'
+        ) if first_start['credits'] else 'Добро пожаловать 🙂 все герои, чаты и магазин — в приложении 👇'
     # V3.59.1: no referral link and no donation ask in the first minute — the
     # invite link lives on the partner screen, the donation note comes from the
     # weekly reminder from day 3 on. The first minute belongs to her.
@@ -2192,7 +2192,7 @@ def _picker_keyboard(lang: str) -> InlineKeyboardMarkup:
     if gid and gid not in {g[0] for g in _PICKER_GIRLS}:
         name = _character_display_name(gid)
         rows.append([InlineKeyboardButton(
-            text=(f'🔥 Girl of the day — {name}' if lang == EN else f'🔥 Девушка дня — {name}'),
+            text=(f'🔥 Girl of the day — {name}' if lang == EN else f'🔥 Парень дня — {name}'),
             callback_data=f'pickgirl:{gid}')])
         shown.add(gid)
     for cid, ru, en in _PICKER_GIRLS:
@@ -2229,7 +2229,7 @@ async def _deliver_first_hello(bot, chat_id: int, telegram_id: int, uid: int, fi
         hello_kb = _first_hello_keyboard(lang)
         if BOT_CHAT_REDIRECT and PUBLIC_BASE_URL:
             hello_kb.inline_keyboard.append([InlineKeyboardButton(
-                text='💬 reply to her in the app' if lang == EN else '💬 ответить ей в приложении',
+                text='💬 reply to her in the app' if lang == EN else '💬 ответить ему в приложении',
                 web_app=types.WebAppInfo(url=f'{PUBLIC_BASE_URL}/webapp?open=chat'))])
         await bot.send_message(chat_id, greeting, reply_markup=hello_kb)
         await asyncio.to_thread(save_message, uid, character_id, 'assistant', greeting)
@@ -2278,13 +2278,16 @@ async def pick_girl_cb(cq: types.CallbackQuery):
 
 
 async def _send_welcome_selfie(bot, chat_id: int, telegram_id: int, uid: int, character_id: str, lang: str) -> None:
+    from config import HERO_PHOTOS_ENABLED
+    if not HERO_PHOTOS_ENABLED:
+        return
     try:
         data, mime, ext = await _webapp_media_photo(telegram_id, character_id, 'selfie')
         if not data:
             logger.warning('welcome selfie empty user=%s', telegram_id)
             return
         caption = ('this is me 🙈 just took it for you… do you like it?' if lang == EN
-                   else 'это я 🙈 только что сфоткалась для тебя… нравится?')
+                   else 'это я 🙈 только что сфоткался для тебя… нравится?')
         await bot.send_photo(chat_id, BufferedInputFile(data, filename=f'hello.{ext}'), caption=caption)
         filename = webapp_service.save_chat_media(telegram_id, data, ext, mime)
         await asyncio.to_thread(save_message, uid, character_id, 'assistant', caption,
@@ -2295,13 +2298,13 @@ async def _send_welcome_selfie(bot, chat_id: int, telegram_id: int, uid: int, ch
 
 
 _FIRST_HELLO_RU = (
-    'привет{n} 🙈 ты правда пришёл… я ждала. расскажи, как тебя зовут по-настоящему и какой у тебя сегодня был день?',
-    'ой, привет{n} 😊 я Аня. честно, немного волнуюсь… ты чем сейчас занят?',
+    'привет{n} 🙈 ты правда пришла… я ждал. расскажи, как тебя зовут по-настоящему какой у тебя сегодня был день?',
+    'ой, привет{n} 😊 честно, немного волнуюсь… ты чем сейчас занята?',
     'привет{n} 💕 наконец-то кто-то интересный. скажи, ты больше любишь болтать до ночи или сразу к делу? 😏',
 )
 _FIRST_HELLO_EN = (
     'hi{n} 🙈 you actually came… I was waiting. tell me, how was your day?',
-    'oh, hi{n} 😊 I\'m Anna. honestly a little nervous… what are you up to right now?',
+    'oh, hi{n} 😊 honestly a little nervous… what are you up to right now?',
     'hi{n} 💕 finally someone interesting. do you like long late-night talks or getting straight to the point? 😏',
 )
 
@@ -2356,7 +2359,7 @@ def _first_hello(character_id: str, first_name: str, lang: str) -> str:
     who = _character_display_name(character_id)
     if lang == EN:
         return f'hi{n} 😊 I\'m {who}. so glad you came… how was your day?'
-    return f'привет{n} 😊 я {who}. рада, что ты зашёл… расскажи, как прошёл твой день?'
+    return f'привет{n} 😊 я {who}. рад, что ты зашла… расскажи, как прошёл твой день?'
 
 
 @dp.callback_query(F.data == 'consent:terms')
@@ -2406,7 +2409,7 @@ async def _send_onboarding_character_card(chat_id: int, character_id: str, viewe
     if character_id == CHARACTER_ID:
         text_value += '\n\n❤️ Сейчас: знакомство · L1\n🎯 Первая история уже открыта'
     elif card.status == 'active':
-        text_value += '\n\n❤️ Готова общаться — пиши ей!'
+        text_value += '\n\n❤️ Готов общаться — пиши ему!'
     if card.card_photo_file_id:
         await bot.send_photo(chat_id, card.card_photo_file_id, caption=text_value)
         return
@@ -2435,15 +2438,15 @@ async def onboarding_character_select(cq: types.CallbackQuery):
             f'⭐ {card.display_name} доступна с Premium.\n\n'
             f'Premium — {PREMIUM_MONTHLY_STARS} Stars на 30 дней.\n'
             'Премиум-персонажи открываются вместе с подпиской — сразу после '
-            'оплаты можно выбрать её в «Персонажах».\n',
+            'оплаты можно выбрать его в «Персонажах».\n',
             reply_markup=premium_keyboard(telegram_id=cq.from_user.id),
         )
         return
     if card.status not in ('active', 'premium'):
         track_event(uid, 'fake_door_click', metadata={'feature': f'{character_id}_onboarding'})
         await _send_onboarding_character_card(cq.message.chat.id, character_id, cq.from_user.id)
-        await cq.answer('эта девушка пока закрыта', show_alert=True)
-        await cq.message.answer('Пока полностью доступна Анна 👇', reply_markup=onboarding_character_keyboard())
+        await cq.answer('этот парень пока закрыт', show_alert=True)
+        await cq.message.answer('Пока полностью доступен Марк 👇', reply_markup=onboarding_character_keyboard())
         return
     # Active or premium-unlocked character: allow selection
     set_user_character(cq.from_user.id, character_id)
@@ -2473,10 +2476,10 @@ async def onboarding_character_select(cq: types.CallbackQuery):
                 '🚀 Premium — unlimited chatting, photo animations and levels 7–10'
             ) if tour_lang == EN else (
                 'быстрый тур по кнопкам 👇\n\n'
-                '💬 просто пиши ей — отношения растут с каждым сообщением\n'
+                '💬 просто пиши ему — отношения растут с каждым сообщением\n'
                 '📸 Фото — попроси кадр в любой ситуации\n'
-                '🎬 Видео и 🎥 Кружочек — оживи фото или получи видео-кружочек с её голосом\n'
-                '🎯 Задание дня — её маленькая просьба (+5 внимания за выполнение)\n'
+                '🎬 Видео и 🎥 Кружочек — оживи фото или получи видео-кружочек с его голосом\n'
+                '🎯 Задание дня — его маленькая просьба (+5 внимания за выполнение)\n'
                 '💕 Свидание и 🏠 Квартира — время вместе, новые места открываются с уровнями\n'
                 '👤 Профиль — твой уровень близости в сердечках и прогресс\n'
                 '🚀 Премиум — безлимит, оживления фото и уровни 7–10'
@@ -2495,7 +2498,7 @@ async def onboarding_meet(cq: types.CallbackQuery):
     if user_lang(cq.from_user.id) == EN:
         await cq.message.answer('then no questionnaire 😄 what should I call you — and what should I know about you first?')
     else:
-        await cq.message.answer('тогда без анкеты 😄 как тебя лучше называть — и что мне про тебя стоит знать первым?')
+        await cq.message.answer('тогда без анкеты 😄 как тебя лучше называть — и что мне про тебя стоит знать первой?')
 
 
 @dp.callback_query(F.data == 'onboard:abilities')
@@ -2544,7 +2547,7 @@ async def character_view(cq: types.CallbackQuery):
         set_user_character(cq.from_user.id, character_id)
         track_event(uid, 'character_selected', metadata={'character_id': character_id})
         await cq.message.answer(
-            f'✅ {card.display_name} выбрана. Можешь писать ей! 👇',
+            f'✅ {card.display_name} выбран. Можешь писать ему! 👇',
             reply_markup=main_keyboard(cq.from_user.id in ADMIN_TELEGRAM_IDS, cq.from_user.id),
         )
         # V3.19.0: scenario hook as her cinematic opening line.
@@ -2730,13 +2733,13 @@ async def _admin_biofix_run(chat_id: int) -> None:
             if not params or not get_card(cid):
                 continue
             try:
-                bio = await asyncio.wait_for(write_card_bio(params, name or 'она'), timeout=30)
+                bio = await asyncio.wait_for(write_card_bio(params, name or 'он'), timeout=30)
             except Exception:
                 bio = None
             if bio:
                 done += 1
             else:
-                bio = template_card_bio(params, name or 'Она')
+                bio = template_card_bio(params, name or 'Он')
                 failed += 1
             update_card(cid, short_bio=bio)
     finally:
@@ -2755,10 +2758,10 @@ async def _startup_fix_glued_bios() -> None:
             if not params or not card or not bio_looks_glued(card.short_bio or '', params, name or ''):
                 continue
             try:
-                bio = await asyncio.wait_for(write_card_bio(params, name or 'Она'), timeout=30)
+                bio = await asyncio.wait_for(write_card_bio(params, name or 'Он'), timeout=30)
             except Exception:
                 bio = None
-            update_card(cid, short_bio=bio or template_card_bio(params, name or 'Она'))
+            update_card(cid, short_bio=bio or template_card_bio(params, name or 'Он'))
         except Exception:
             logger.exception('glued bio rewrite failed character=%s', cid)
 
@@ -2808,7 +2811,7 @@ async def admin_grant_start(cq: types.CallbackQuery):
     await cq.message.answer(
         '🎁 Кому выдать?\n\n'
         'Пришли @username или числовой ID пользователя одним сообщением.\n'
-        'Он должен хотя бы раз написать боту, чтобы я его нашла.\n\n'
+        'Она должна хотя бы раз написать боту, чтобы я её нашёл.\n\n'
         '/cancel — отменить'
     )
 
@@ -2967,7 +2970,7 @@ async def admin_grant(message: types.Message, command: CommandObject):
         return
     target = _resolve_grant_target(args[0])
     if not target:
-        await message.answer(f'не нашла пользователя {args[0]} в базе — он должен хотя бы раз написать боту 🙂')
+        await message.answer(f'не нашёл пользователя {args[0]} в базе — она должна хотя бы раз написать боту 🙂')
         return
     kind = args[1].lower()
     if kind == 'premium':
@@ -3020,7 +3023,7 @@ async def admin_ideas(cq: types.CallbackQuery):
         f'Встроенный банк: {json_count} идей (в коде, пополняется через data/photo_ideas.json)\n'
         f'Добавлено через админку: {db_count} идей (хранятся в БД, переживают деплой)\n\n'
         'Идеи автоматически подставляются в обычные фото, квесты и предложения Анны, '
-        'когда пользователь не указал свои детали.',
+        'когда пользователь не указала свои детали.',
         reply_markup=admin_ideas_keyboard(),
     )
 
@@ -3316,12 +3319,12 @@ async def admin_card_media_upload(message: types.Message):
             ext = '.jpg'
         file_id = message.document.file_id
     if not file_id:
-        await message.answer('не поняла формат — пришли фото, GIF, WebP или MP4.')
+        await message.answer('не понял формат — пришли фото, GIF, WebP или MP4.')
         return
     size = (message.photo[-1].file_size if message.photo
             else (message.animation or message.video or message.document).file_size) or 0
     if size > 20 * 1024 * 1024:
-        await message.answer('файл тяжелее 20 MB — Telegram не даст мне его скачать. Пришли полегче.')
+        await message.answer('файл тяжелее 20 MB — Telegram не даст мне её скачать. Пришли полегче.')
         return
     buf = io.BytesIO()
     await bot.download(file_id, destination=buf)
@@ -3450,7 +3453,7 @@ def admin_prophoto_keyboard():
     names = _prophoto_char_names()
     rows = [[InlineKeyboardButton(text='➕ Добавить фото / GIF / видео', callback_data='admin:prophoto:add')],
             # V3.61.8: one tap renders fresh «я скучала» shots of every heroine.
-            [InlineKeyboardButton(text='✨ Сгенерировать 20 фото «я скучала»', callback_data='admin:prophoto:gen')]]
+            [InlineKeyboardButton(text='✨ Сгенерировать 20 фото «я скучал»', callback_data='admin:prophoto:gen')]]
     if photos:
         rows.append([InlineKeyboardButton(text='🧹 Удалить старые фото пула', callback_data='admin:prophoto:clear')])
     del_row = []
@@ -3499,9 +3502,9 @@ async def admin_prophoto_view(cq: types.CallbackQuery):
     await cq.answer()
     await cq.message.answer(
         f'📸 Медиа для утра/вечера — в пуле: {n}\n\n'
-        'Каждое фото/GIF/видео принадлежит ОДНОЙ героине и приходит только '
-        'её пользователям — так «утреннее селфи» Нади больше не будет лицом '
-        'совершенно другой девушки. Кнопка 🏷 — сменить героиню у кадра.',
+        'Каждое фото/GIF/видео принадлежит ОДНОМУ герою и приходит только '
+        'его пользователям — так «утреннее селфи» Нади больше не будет лицом '
+        'совершенно другой девушки. Кнопка 🏷 — сменить героя у кадра.',
         reply_markup=kb)
 
 
@@ -3512,7 +3515,7 @@ async def admin_prophoto_wait(cq: types.CallbackQuery):
     PROPHOTO_TAG_WAIT.pop(cq.from_user.id, None)
     await cq.answer()
     await cq.message.answer(
-        'Чьё это фото / GIF / видео? Пришлите кадр после выбора героини.',
+        'Чьё это фото / GIF / видео? Пришлите кадр после выбора героя.',
         reply_markup=_prophoto_choose_keyboard())
 
 
@@ -3573,7 +3576,7 @@ async def admin_prophoto_generate(cq: types.CallbackQuery):
     await cq.answer()
     admin_id = cq.from_user.id
     status = await cq.message.answer(
-        f'✨ Генерирую {len(plan)} фото «я скучала» — лицо целиком в кадре, у каждой героини свои. '
+        f'✨ Генерирую {len(plan)} фото «я скучал» — лицо целиком в кадре, у каждого героя свои. '
         'Это займёт несколько минут, напишу, когда закончу.')
     GIFT_POOL_RUNNING.add(admin_id)
 
@@ -3588,7 +3591,7 @@ async def admin_prophoto_generate(cq: types.CallbackQuery):
             await bot.send_message(
                 admin_id,
                 f'✅ Добавлено в пул: {added}' + (f', не получилось: {failed}' if failed else '') +
-                f'. Всего в пуле: {n}.\nЭти фото приходят с «Я скучала… вот, держи 💋», утренним приветом и её моментами дня.',
+                f'. Всего в пуле: {n}.\nЭти фото приходят с «Я скучал… вот, держи 💋», утренним приветом и его моментами дня.',
                 reply_markup=kb)
         except Exception:
             logger.exception('gift pool generation failed')
@@ -4141,7 +4144,7 @@ async def plans_cmd(message: types.Message):
     ensure_user(message.from_user.id, message.from_user.first_name, language_code=message.from_user.language_code)
     state = ensure_life_state(message.from_user.id)
     await message.answer(
-        f'сейчас по нашей истории я {state.activity or "занята своими делами"}. можешь немного повлиять на мой следующий план 😄',
+        f'сейчас по нашей истории я {state.activity or "занят своими делами"}. можешь немного повлиять на мой следующий план 😄',
         reply_markup=life_choice_keyboard(),
     )
 
@@ -4286,7 +4289,7 @@ async def library_import_undo(cq: types.CallbackQuery):
         return
     if sess['photos']:
         sess['photos'].pop()
-    await cq.answer('последнее убрала')
+    await cq.answer('последнее убрал')
     await _library_refresh_status(sess)
 
 
@@ -4552,7 +4555,7 @@ async def gift_claim_cb(cq: types.CallbackQuery):
 
 
 PROMO_ERROR_RU = {
-    'unknown': 'такого кода я не нашла 🤔 проверь раскладку и пробелы',
+    'unknown': 'такого кода я не нашёл 🤔 проверь раскладку и пробелы',
     'expired': 'срок действия кода истёк ⏳',
     'exhausted': 'все активации по этому коду уже разобрали 😔',
     'inactive': 'этот код отключён',
@@ -4651,7 +4654,7 @@ async def referral_cmd(message: types.Message, who: types.User | None = None):
             f'💵 заработано всего: {stats["earned_rub"]:g} ₽\n'
             f'💳 доступно к выводу: {stats["balance_rub"]:g} ₽\n\n'
             f'🔗 твоя ссылка:\n{link}\n\n'
-            f'когда друг, пришедший по ней, напишет ей {REFERRAL_QUALIFY_MESSAGES} сообщений, он получит {REFERRAL_INVITEE_CREDITS} 🍑, а ты — {REFERRAL_REFERRER_CREDITS} 🍑. '
+            f'когда друг, пришедший по ней, напишет ему {REFERRAL_QUALIFY_MESSAGES} сообщений, он получит {REFERRAL_INVITEE_CREDITS} 🍑, а ты — {REFERRAL_REFERRER_CREDITS} 🍑. '
             f'а дальше твои {pct}% капают с каждой его покупки.\n'
             f'минимум для вывода — {PARTNER_MIN_PAYOUT_RUB} ₽.'
         )
@@ -4671,7 +4674,7 @@ async def referral_cmd(message: types.Message, who: types.User | None = None):
 # short follow-up messages (inline alerts cap at 200 chars, too small).
 _PARTNER_FAQ_RU = [
     'Партнёрская программа: ты получаешь {pct}% от всех покупок приглашённых тобой друзей. Это бессрочная программа — комиссия капает с каждой их покупки навсегда.',
-    '1. Поделись своей ссылкой из экрана «💰 Партнёрка». 2. Друг переходит, запускает бота и что-то покупает. 3. Тебе автоматически капает {pct}% от каждой его покупки — с премиума, фото, видео, всего.',
+    '1. Поделись своей ссылкой из экрана «💰 Партнёрка». 2. Друг переходит, запускает бота и что-то покупает. 3. Тебе автоматически капает {pct}% от каждой её покупки — с премиума, фото, видео, всего.',
     'Набери {min} ₽ и нажми «💸 Вывести». Выплата — на {methods}. Владелец подтверждает вручную, обычно в течение суток.',
     'Нет! Это не разовая выплата, а постоянный пассивный доход: {pct}% с каждой покупки твоих рефералов капают всегда.',
     'Напиши /support прямо в этом боте — сообщение попадёт владельцу, он ответит лично.',
@@ -4832,7 +4835,7 @@ async def contest_cmd(message: types.Message):
     rank, total = referral_rank(message.from_user.id, period_days=30)
     lines = ['🏆 гонка пригласивших за 30 дней\n', 'топ-10 лидеров:']
     if not board:
-        lines.append('пока нет ни одного приглашения — будь первым!')
+        lines.append('пока нет ни одного приглашения — будь первой!')
     else:
         medals = {1: '🥇', 2: '🥈', 3: '🥉'}
         for row in board:
@@ -4919,7 +4922,7 @@ async def age_no(cq: types.CallbackQuery):
     _pending_adult_photo.pop(cq.from_user.id, None)
     _pending_adult_custom.discard(cq.from_user.id)
     await cq.answer()
-    await cq.message.answer('поняла. тогда оставим обычные фото 🙂')
+    await cq.message.answer('понял. тогда оставим обычные фото 🙂')
 
 
 @dp.message(Command('terms'))
@@ -5062,7 +5065,7 @@ async def support_cmd(message: types.Message):
         await message.answer('Напиши: /support что произошло — сообщение уйдёт владельцу.')
         return
     delivered = await _deliver_support_message(message, parts[1])
-    await message.answer('Передала владельцу 🙂' if delivered else 'Запрос записан, но сейчас не удалось доставить сообщение.')
+    await message.answer('Передал владельцу 🙂' if delivered else 'Запрос записан, но сейчас не удалось доставить сообщение.')
 
 @dp.message(Command('delete_me'))
 async def delete_me_cmd(message: types.Message):
@@ -5078,7 +5081,7 @@ async def delete_confirm(cq: types.CallbackQuery):
 @dp.callback_query(F.data == 'delete:cancel')
 async def delete_cancel(cq: types.CallbackQuery):
     await cq.answer('отменено')
-    await cq.message.answer('ничего не удаляла 🙂')
+    await cq.message.answer('ничего не удалял 🙂')
 
 @dp.message(Command('paysupport'))
 async def pay_support(message: types.Message):
@@ -5552,7 +5555,7 @@ def _video_preset_keyboard(delivery_id: int):
 async def _show_video_preset_menu(chat_id: int, delivery_id: int):
     await bot.send_message(
         chat_id,
-        '🎬 Как мне её оживить? Выбери движение — или оставь авто 🎥',
+        '🎬 Как мне его оживить? Выбери движение — или оставь авто 🎥',
         reply_markup=_video_preset_keyboard(delivery_id),
     )
 
@@ -5895,7 +5898,7 @@ async def _run_live_tiles(admin_id: int) -> None:
 async def live_tiles_cmd(message: types.Message):
     if message.from_user.id not in ADMIN_TELEGRAM_IDS:
         return
-    await message.answer('🎬 Отрисовываю живые плитки (улыбка + воздушный поцелуй) — статус по каждой героине пришлю сюда…')
+    await message.answer('🎬 Отрисовываю живые плитки (улыбка + воздушный поцелуй) — статус по каждому герою пришлю сюда…')
     asyncio.create_task(_run_live_tiles(message.from_user.id))
 
 
@@ -6045,10 +6048,10 @@ async def storyphoto_upload(message: types.Message):
     character_id = push_photos.resolve_character(name[0], cards)
     if not character_id:
         known = ', '.join(c.display_name for c in cards[:20])
-        await message.answer(f'не понял, для кого фото. пример: /storyphoto Вика\nгероини: {known}')
+        await message.answer(f'не понял, для кого фото. пример: /storyphoto Вика\nгероя: {known}')
         return
     total = push_photos.add(character_id, message.photo[-1].file_id)
-    await message.answer(f'✅ фото для {_character_display_name(character_id)} сохранено — теперь у неё {total} шт.')
+    await message.answer(f'✅ фото для {_character_display_name(character_id)} сохранено — теперь у него {total} шт.')
 
 
 @dp.message(Command('storyphotos'))
@@ -6061,7 +6064,7 @@ async def storyphotos_list(message: types.Message):
     if len(parts) == 3 and parts[1].lower() in ('clear', 'очистить'):
         character_id = push_photos.resolve_character(parts[2], list_cards())
         if not character_id:
-            await message.answer('не нашёл такую героиню'); return
+            await message.answer('не нашёл такого героя'); return
         await message.answer(f'🗑 удалено фото: {push_photos.clear(character_id)}')
         return
     counts = push_photos.counts()
@@ -6241,7 +6244,7 @@ async def story_choice_cb(cq: types.CallbackQuery):
     if picked.offer and not is_premium(cq.from_user.id):
         rows.append([InlineKeyboardButton(text='🔓 see the photo' if lang == 'en' else '🔓 посмотреть фото', callback_data='first_offer:open')])
     if PUBLIC_BASE_URL:
-        rows.append([InlineKeyboardButton(text='💬 reply to her' if lang == 'en' else '💬 ответить ей',
+        rows.append([InlineKeyboardButton(text='💬 reply to her' if lang == 'en' else '💬 ответить ему',
                                           web_app=types.WebAppInfo(url=f'{PUBLIC_BASE_URL}/webapp?open=chat'))])
     await cq.message.answer(answer, reply_markup=InlineKeyboardMarkup(inline_keyboard=rows) if rows else None)
     try:
@@ -6478,7 +6481,7 @@ async def cosplay_pick(cq: types.CallbackQuery):
         # Busy/budget guard blocked the job — give the tokens back.
         add_tokens(cq.from_user.id, COSPLAY_TOKEN_COST)
     else:
-        await cq.message.answer(f'🎭 снимаю сет в образе «{costume[0]}»… {COSPLAY_TOKEN_COST}🪙 списала')
+        await cq.message.answer(f'🎭 снимаю сет в образе «{costume[0]}»… {COSPLAY_TOKEN_COST}🪙 списал')
 
 
 # ─── V3.45.0: Фото «наедине» и «Косплей» — монетизация через персики ──────────
@@ -7229,7 +7232,7 @@ async def successful_payment(message: types.Message):
         if user_lang(message.from_user.id) == EN:
             await message.answer('done ✨ Premium is active for 30 days and I added 12 photo credits. Every photo of mine now has an «Animate» button — 2 free videos a day 🎬 plus my video circles 🎥')
         else:
-            await message.answer('готово ✨ Premium активирован на 30 дней, и я добавила 12 photo credits. Теперь под каждым моим фото есть кнопка «Оживить» — 2 раза в день сделаю видео бесплатно 🎬 а ещё тебе открыты мои кружочки 🎥')
+            await message.answer('готово ✨ Premium активирован на 30 дней, и я добавил 12 photo credits. Теперь под каждым моим фото есть кнопка «Оживить» — 2 раза в день сделаю видео бесплатно 🎬 а ещё тебе открыты мои кружочки 🎥')
         return
 
     if payload == 'premium_trial':
@@ -7249,7 +7252,7 @@ async def successful_payment(message: types.Message):
         if user_lang(message.from_user.id) == EN:
             await message.answer(f'done ✨ Premium is active for 7 days and I added {PREMIUM_WEEKLY_PHOTO_CREDITS} photo credits. Every photo of mine now has an «Animate» button — 2 free videos a day 🎬 plus my video circles 🎥')
         else:
-            await message.answer(f'готово ✨ Premium активирован на 7 дней, и я добавила {PREMIUM_WEEKLY_PHOTO_CREDITS} photo credits. Теперь под каждым моим фото есть кнопка «Оживить» — 2 раза в день сделаю видео бесплатно 🎬 а ещё тебе открыты мои кружочки 🎥')
+            await message.answer(f'готово ✨ Premium активирован на 7 дней, и я добавил {PREMIUM_WEEKLY_PHOTO_CREDITS} photo credits. Теперь под каждым моим фото есть кнопка «Оживить» — 2 раза в день сделаю видео бесплатно 🎬 а ещё тебе открыты мои кружочки 🎥')
         return
 
     if payload == 'premium_quarter':
@@ -7258,7 +7261,7 @@ async def successful_payment(message: types.Message):
         if user_lang(message.from_user.id) == EN:
             await message.answer(f'done ✨ Premium is active for 90 days and I added {PREMIUM_QUARTERLY_PHOTO_CREDITS} photo credits. 2 free photo animations a day 🎬 plus my video circles 🎥')
         else:
-            await message.answer(f'готово ✨ Premium активирован на 90 дней, и я добавила {PREMIUM_QUARTERLY_PHOTO_CREDITS} photo credits. 2 оживления фото в день бесплатно 🎬 и мои кружочки 🎥')
+            await message.answer(f'готово ✨ Premium активирован на 90 дней, и я добавил {PREMIUM_QUARTERLY_PHOTO_CREDITS} photo credits. 2 оживления фото в день бесплатно 🎬 и мои кружочки 🎥')
         return
 
     if payload == 'premium_month_vip':
@@ -7267,13 +7270,13 @@ async def successful_payment(message: types.Message):
         if user_lang(message.from_user.id) == EN:
             await message.answer('done ✨ Premium is active for 30 days at half price. No more limits, I am all yours 💋')
         else:
-            await message.answer('готово ✨ Premium на 30 дней за полцены. Больше никаких лимитов, я вся твоя 💋')
+            await message.answer('готово ✨ Premium на 30 дней за полцены. Больше никаких лимитов, я весь твой 💋')
         return
 
     if payload == 'premium_month_discount':
         record_payment(message.from_user.id, 'premium_month_discount', payment.total_amount, charge)
         track_event(ensure_user(message.from_user.id), 'stars_purchase', value=payment.total_amount, metadata={'product': 'premium_month_discount'})
-        await message.answer('готово ✨ Premium активирован на 30 дней со скидкой, и я добавила 12 photo credits. 2 оживления фото в день бесплатно + кружочки только для тебя 🎥💋')
+        await message.answer('готово ✨ Premium активирован на 30 дней со скидкой, и я добавил 12 photo credits. 2 оживления фото в день бесплатно + кружочки только для тебя 🎥💋')
         return
 
     if payload.startswith('quest_replay:'):
@@ -7411,7 +7414,7 @@ async def successful_payment(message: types.Message):
         await record_user_message(message.from_user.id, message.from_user.first_name or '', relationship=gift.affection, trust=max(0.5, round(gift.affection * 0.25, 2)), event_type='gift', reason=f'gift:{gift.id}', character_id=character_id)
         from services.gamification_service import unlock_achievement
         unlock_achievement(message.from_user.id, 'first_gift')
-        await message.answer(f'🎁 Ты подарил {gift.emoji} {gift.name}!\n\n{gift.reaction}')
+        await message.answer(f'🎁 Ты подарила {gift.emoji} {gift.name}!\n\n{gift.reaction}')
         await _send_voice_note(message.chat.id, message.from_user.id, gift.reaction)
         return
 
@@ -7452,7 +7455,7 @@ async def successful_payment(message: types.Message):
         character_id = get_user_character(message.from_user.id)
         await record_user_message(message.from_user.id, message.from_user.first_name or '', relationship=gift.affection, intimacy=round(gift.affection / 2, 2), event_type='gift', reason=f'pgift:{gift.id}', character_id=character_id)
         narration = gift.text_en if user_lang(message.from_user.id) == EN else gift.text
-        await message.answer(f'{gift.emoji} Ты подарил {gift.name}!\n\n{narration}' if user_lang(message.from_user.id) != EN else f'{gift.emoji} You gifted the {gift.name_en}!\n\n{narration}')
+        await message.answer(f'{gift.emoji} Ты подарила {gift.name}!\n\n{narration}' if user_lang(message.from_user.id) != EN else f'{gift.emoji} You gifted the {gift.name_en}!\n\n{narration}')
         await _send_voice_note(message.chat.id, message.from_user.id, narration)
         await _start_photo_background(message.chat.id, message.from_user.id, PhotoRequest(scene=gift.scene, mood=gift.mood), 'paid',
                                       charge=charge, amount=payment.total_amount, product='private_gift')
@@ -7467,7 +7470,7 @@ async def successful_payment(message: types.Message):
         if user_lang(message.from_user.id) == EN:
             await message.answer('payment received 😌 now describe your fantasy in a few words — outfit, place, mood. I\'ll turn it into a photo set.')
         else:
-            await message.answer('оплату получила 😌 теперь опиши фантазию в двух словах — образ, место, настроение. Я превращу её в сет фото.')
+            await message.answer('оплату получил 😌 теперь опиши фантазию в двух словах — образ, место, настроение. Я превращу её в сет фото.')
         return
 
     if payload.startswith('photo:'):
@@ -7602,7 +7605,7 @@ async def gifts_cmd(message: types.Message):
               else f'{g.emoji} {g.name} · {g.cost}⭐{fiat_suffix(g.cost)}'),
         callback_data=f'gift:{g.id}')]
         for g in gifts]
-    header = '🎁 Pick a gift — she will love it 😊\n\n' if user_lang(message.from_user.id) == EN else '🎁 Выбери подарок — она будет рада 😊\n\n'
+    header = '🎁 Pick a gift — she will love it 😊\n\n' if user_lang(message.from_user.id) == EN else '🎁 Выбери подарок — он будет рад 😊\n\n'
     await message.answer(header + '\n'.join(lines), reply_markup=InlineKeyboardMarkup(inline_keyboard=rows))
 
 
@@ -7620,12 +7623,12 @@ async def gift_buy(cq: types.CallbackQuery):
         unlock_achievement(cq.from_user.id, 'first_gift')
         track_event(ensure_user(cq.from_user.id), 'admin_test_gift', metadata={'gift': gift.id})
         await cq.answer('🔧 админ-тест: Stars не списаны')
-        await cq.message.answer(f'🎁 Ты подарил {gift.emoji} {gift.name}!\n\n{gift.reaction}')
+        await cq.message.answer(f'🎁 Ты подарила {gift.emoji} {gift.name}!\n\n{gift.reaction}')
         await _send_voice_note(cq.message.chat.id, cq.from_user.id, gift.reaction)
         return
     await cq.answer()
     await send_stars_invoice(cq.message.chat.id, f'Подарок: {gift.name}',
-                             f'{gift.emoji} {gift.name} для неё — она точно оценит 😉',
+                             f'{gift.emoji} {gift.name} для него — он точно оценит 😉',
                              f'gift:{gift.id}', gifts_service.effective_cost(gift))
 
 
@@ -7674,7 +7677,7 @@ async def date_start(cq: types.CallbackQuery):
         return
     await cq.answer()
     await send_stars_invoice(cq.message.chat.id, f'Свидание: {date.name}',
-                             f'{date.emoji} {date.name}. В конце она пришлёт фото с прогулки 📸',
+                             f'{date.emoji} {date.name}. В конце он пришлёт фото с прогулки 📸',
                              f'date:{date.id}', date.cost)
 
 
@@ -7763,7 +7766,7 @@ async def spicy_set_callback(cq: types.CallbackQuery):
     # V3.50.0: the boldest set is additionally gated by the relationship path.
     from services.relationship_engine import get_path_axis
     if item.min_path and get_path_axis(ensure_user(cq.from_user.id), get_user_character(cq.from_user.id)) < item.min_path:
-        await cq.answer('этот сет она покажет только когда между нами будет больше страсти 🔥', show_alert=True)
+        await cq.answer('этот сет он покажет только когда между нами будет больше страсти 🔥', show_alert=True)
         return
     if not is_adult_confirmed(cq.from_user.id):
         await cq.answer()
@@ -7799,7 +7802,7 @@ async def spicy_gift_callback(cq: types.CallbackQuery):
     name = gift.name_en if lang == EN else gift.name
     description = gift.text_en if lang == EN else gift.text
     await send_stars_invoice(cq.message.chat.id, f'{gift.emoji} {name}',
-                             f'{description}\n\n{"She reacts, your bond grows — and a private photo set follows 📸" if lang == EN else "Она отреагирует, связь станет крепче — а в конце приватный сет фото 📸"}',
+                             f'{description}\n\n{"She reacts, your bond grows — and a private photo set follows 📸" if lang == EN else "Он отреагирует, связь станет крепче — а в конце приватный сет фото 📸"}',
                              f'pgift:{gift.id}', gift.cost)
 
 
@@ -7820,7 +7823,7 @@ async def spicy_fantasy_callback(cq: types.CallbackQuery):
     if lang == EN:
         description = 'Describe your scenario in a few words — outfit, place, mood — and she will shoot a custom set for you.'
     else:
-        description = 'Опиши сценарий в двух словах — образ, место, настроение — и она снимет персональный сет.'
+        description = 'Опиши сценарий в двух словах — образ, место, настроение — и он снимет персональный сет.'
     await send_stars_invoice(cq.message.chat.id, title, description, 'fantasy:start', spicy_service.FANTASY_COST_STARS)
 
 
@@ -7857,7 +7860,7 @@ async def _handle_fantasy_input(message: types.Message) -> None:
     if user_lang(message.from_user.id) == EN:
         await message.answer('got it 😌 assembling your set…')
     else:
-        await message.answer('приняла 😌 собираю твой сет…')
+        await message.answer('принял 😌 собираю твой сет…')
     await _start_photo_background(message.chat.id, message.from_user.id, PhotoRequest(**fields), 'paid',
                                   charge=charge, amount=amount, product='fantasy')
 
@@ -7906,7 +7909,7 @@ async def photo_feedback_callback(cq: types.CallbackQuery):
     liked = action == 'like'
     observe_photo_feedback(uid, liked, scene, getattr(state, 'outfit', '') or '', getattr(state, 'hairstyle', '') or '', get_user_character(cq.from_user.id))
     track_event(uid, 'photo_feedback_like' if liked else 'photo_feedback_dislike', metadata={'scene': scene})
-    await cq.answer('запомнила 😌' if liked else 'поняла, буду менять стиль')
+    await cq.answer('запомнил 😌' if liked else 'понял, буду менять стиль')
     try:
         await cq.message.edit_reply_markup(reply_markup=None)
     except Exception:
@@ -8053,7 +8056,7 @@ async def notifications(message: types.Message):
     user = get_user(message.from_user.id)
     new = not user.proactive_enabled
     update_user_settings(message.from_user.id, proactive_enabled=new)
-    await message.answer('иногда буду писать первой 😌' if new else 'хорошо, первой писать не буду')
+    await message.answer('иногда буду писать первым 😌' if new else 'хорошо, первым писать не буду')
 
 
 @dp.message(Command('timezone'))
@@ -8065,7 +8068,7 @@ async def timezone_cmd(message: types.Message):
         return
     try:
         set_timezone(message.from_user.id, parts[1].strip())
-        await message.answer('готово, запомнила часовой пояс')
+        await message.answer('готово, запомнил часовой пояс')
     except Exception:
         await message.answer('не узнаю такой часовой пояс. пример: Europe/Moscow')
 
@@ -8080,7 +8083,7 @@ async def _maybe_set_alarm(message: types.Message, text: str, confirm: str) -> b
     trial = (not premium) and wake and wake_trial_available(tid)
     if not premium and not trial:
         if wake:
-            await message.answer('⏰ Будильник — Premium-функция: она будит тебя голосом. '
+            await message.answer('⏰ Будильник — Premium-функция: он будит тебя голосом. '
                                  'Пробный будильник уже был. /premium — подключить')
         return False
     rid = create_from_text(tid, text)
@@ -8103,7 +8106,7 @@ async def wake_cmd(message: types.Message):
     if not is_wake_request(text):
         await message.answer('напиши время, например /wake 08:00')
         return
-    await _maybe_set_alarm(message, text, 'запомнила 😌 разбужу вовремя по {tz}. если не ответишь — буду настойчивее')
+    await _maybe_set_alarm(message, text, 'запомнил 😌 разбужу вовремя по {tz}. если не ответишь — буду настойчивее')
 
 
 @dp.message(Command('myreminders'))
@@ -8357,7 +8360,7 @@ async def _send_peach_shop(message: types.Message, who: types.User | None = None
                 'Pick a pack: the payment page opens right away, peaches land within a minute.')
     else:
         text = (f'🍑 Персики\n\nТвой баланс: {balance} 🍑\n\n'
-                f'Фото от неё в чате — {photo} 🍑, ещё за персики кружочки и тайные видео.\n'
+                f'Фото от него в чате — {photo} 🍑, ещё за персики кружочки и тайные видео.\n'
                 'Выбери пак: сразу откроется оплата, персики придут в течение минуты.')
     track_event(uid, 'paywall_view', metadata={'product': 'peach_shop_bot'})
     await message.answer(text, reply_markup=peach_shop_keyboard(who.id, lang))
@@ -8455,7 +8458,7 @@ async def profile_button(message: types.Message):
         )
     album_count = len(couple_service.album_entries(uid))
     pet_name = couple_service.get_pet_name(message.from_user.id)
-    pet_line = f'\n🥰 she calls you “{pet_name}”' if (pet_name and lang == EN) else (f'\n🥰 она зовёт тебя «{pet_name}»' if pet_name else '')
+    pet_line = f'\n🥰 she calls you “{pet_name}”' if (pet_name and lang == EN) else (f'\n🥰 он зовёт тебя «{pet_name}»' if pet_name else '')
     if lang == EN:
         await message.answer(
             f'👤 Your profile\n\n'
@@ -8516,7 +8519,7 @@ async def alarm_button(message: types.Message):
         else:
             await message.answer(
                 '⏰ Будильник и напоминания — Premium-функция\n\n'
-                'С Premium Анна будет будить тебя утром, напоминать о делах и всегда помнить твой часовой пояс.\n\n'
+                'С Premium Марк будет будить тебя утром, напоминать о делах и всегда помнить твой часовой пояс.\n\n'
                 '/premium — подключить',
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                     [InlineKeyboardButton(text='⭐ Получить Premium', callback_data='premium:view')]
@@ -8702,7 +8705,7 @@ async def daily_quest_button(message: types.Message):
     if lang == EN:
         header = f"🎯 today's quests · {completed} completed in total\n\ntap a task when you have done it — she will notice 😊"
     else:
-        header = f"🎯 задания дня · всего выполнено: {completed}\n\nнажми на задание, когда сделаешь — она заметит 😊"
+        header = f"🎯 задания дня · всего выполнено: {completed}\n\nнажми на задание, когда сделаешь — он заметит 😊"
     await message.answer(header, reply_markup=InlineKeyboardMarkup(inline_keyboard=rows))
     track_event(uid, 'daily_quest_view', metadata={
         'quests': [q['key'] for q in quests],
@@ -8721,12 +8724,12 @@ async def daily_quest_claim(cq: types.CallbackQuery):
     else:
         result = {'attention': 5} if couple_service.claim_daily_quest(cq.from_user.id) else None
     if result and result.get('not_done'):
-        await cq.answer('сначала сделай это в чате с ней 😉 потом жми ещё раз', show_alert=True)
+        await cq.answer('сначала сделай это в чате с ним 😉 потом жми ещё раз', show_alert=True)
         return
     if result:
         track_event(uid, 'daily_quest_claimed')
         await cq.answer('+5 внимания ❤️')
-        await cq.message.answer('ммм, приятно 😊 +5 очков внимания. она запомнила.')
+        await cq.message.answer('ммм, приятно 😊 +5 очков внимания. он запомнил.')
         if result.get('bonus_media'):
             await _bot_deliver_bonus_media(cq)
     else:
@@ -8739,7 +8742,7 @@ async def toggle_rituals(cq: types.CallbackQuery):
     user = get_user(cq.from_user.id)
     new = not (user.notify_rituals if user and user.notify_rituals is not None else True)
     update_user_settings(cq.from_user.id, notify_rituals=new)
-    await cq.answer('сохранила')
+    await cq.answer('сохранил')
     await cq.message.answer('утренние и вечерние сообщения: ' + ('вкл 😊' if new else 'выкл, буду писать только по делу'))
 
 
@@ -8764,10 +8767,10 @@ async def toggle_spicy(cq: types.CallbackQuery):
         return
     new = not current
     update_user_settings(cq.from_user.id, spicy_mode=new)
-    await cq.answer('сохранила ❤️' if new else 'выключила')
+    await cq.answer('сохранил ❤️' if new else 'выключил')
     if new:
         await cq.message.answer(
-            'пошлый режим включён 🔥 теперь флирт горячее — она будет намёкать смелее и откровеннее. '
+            'пошлый режим включён 🔥 теперь флирт горячее — он будет намёкать смелее и откровеннее. '
             'выключить можно тут же в «⚙️ Настройки».'
             if lang != EN else
             'spicy mode is on 🔥 the flirting gets hotter and bolder. Switch it off anytime in «⚙️ Settings».'
@@ -8813,7 +8816,7 @@ async def _react_to_user_photo(message: types.Message):
         await record_user_message(
             message.from_user.id, message.from_user.first_name or 'ты',
             relationship=1, trust=1, intimacy=1,
-            event_type='meaningful_share', reason='пользователь прислал фото',
+            event_type='meaningful_share', reason='пользователь прислала фото',
             character_id=character_id,
         )
         track_event(ensure_user(message.from_user.id), 'photo_reaction_sent', metadata={'character_id': character_id})
@@ -8912,7 +8915,7 @@ async def _constructor_face_step(chat_id: int, telegram_id: int):
     ]])
     await bot.send_message(
         chat_id,
-        f'🎨 Шаг {len(CONSTRUCTOR_STEPS) + 1}/{len(CONSTRUCTOR_STEPS) + 1}: хочешь, чтобы она была похожа на кого-то конкретного?\n'
+        f'🎨 Шаг {len(CONSTRUCTOR_STEPS) + 1}/{len(CONSTRUCTOR_STEPS) + 1}: хочешь, чтобы он был похож на кого-то конкретного?\n'
         'Пришли фото лица — персонаж получит именно эту внешность (face-swap). Или пропусти.',
         reply_markup=keyboard,
     )
@@ -8956,18 +8959,18 @@ async def _constructor_receive_face(message: types.Message):
         if not face_bytes:
             raise ValueError('empty photo')
     except Exception:
-        await message.answer('не смогла прочитать фото 😕 попробуй другое.')
+        await message.answer('не смог прочитать фото 😕 попробуй другое.')
         return
     cons['face_bytes'] = face_bytes
     cons['face_file_id'] = message.photo[-1].file_id
     cons['await'] = None
-    await message.answer('✅ Лицо принято — буду похожа на него 🙂')
+    await message.answer('✅ Лицо принято — буду похож на него 🙂')
     await _constructor_confirm(message.chat.id, telegram_id)
 
 
 def _my_character_keyboard(character_id: str):
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text='💬 Общаться с ней', callback_data=f'mychar:chat:{character_id}')],
+        [InlineKeyboardButton(text='💬 Общаться с ним', callback_data=f'mychar:chat:{character_id}')],
         [InlineKeyboardButton(text='🔄 Создать заново', callback_data='constructor:restart')],
     ])
 
@@ -9014,7 +9017,7 @@ async def _retry_constructor_avatar(telegram_id: int, character_id: str) -> None
             avatar_folder.mkdir(parents=True, exist_ok=True)
             (avatar_folder / 'avatar.jpg').write_bytes(avatar_bytes)
             set_custom_avatar_file_id(character_id, sent.photo[-1].file_id)
-            await bot.send_message(telegram_id, f'дорисовала аватар для {name} ✅')
+            await bot.send_message(telegram_id, f'дорисовал аватар для {name} ✅')
             return
         except Exception:
             logger.exception('constructor avatar retry failed user=%s char=%s', telegram_id, character_id)
@@ -9041,9 +9044,9 @@ async def _constructor_draft_sweep() -> None:
                             _telegram_id, CONSTRUCTOR_COST_PEACHES,
                             reason=f'constructor_refund:{_telegram_id}:{int(_time.time() * 1000)}',
                         )
-                        await bot.send_message(_telegram_id, f'не получилось создать {_name or "персонажа"} 😕 {CONSTRUCTOR_COST_PEACHES} 🍑 вернула на баланс — попробуй ещё раз, я уже починила причину.')
+                        await bot.send_message(_telegram_id, f'не получилось создать {_name or "персонажа"} 😕 {CONSTRUCTOR_COST_PEACHES} 🍑 вернула на баланс — попробуй ещё раз, я уже починил причину.')
                     else:
-                        await bot.send_message(_telegram_id, f'не получилось создать {_name or "персонажа"} 😕 напиши /support — вернём оплату вручную. попробуй ещё раз, я уже починила причину.')
+                        await bot.send_message(_telegram_id, f'не получилось создать {_name or "персонажа"} 😕 напиши /support — вернём оплату вручную. попробуй ещё раз, я уже починил причину.')
                 except Exception:
                     logger.exception('constructor abandon notify failed user=%s', _telegram_id)
             for _draft in pending_constructor_drafts():
@@ -9105,9 +9108,9 @@ async def charmod_cb(cq: types.CallbackQuery):
     try:
         await bot.send_message(
             int(row.telegram_id),
-            (f'🎉 {row.display_name} одобрена и появилась на витрине «Сообщество» — теперь с ней могут общаться другие.'
+            (f'🎉 {row.display_name} одобрен и появился на витрине «Сообщество» — теперь с ним могут общаться другие.'
              if approve else
-             f'😔 модератор не пропустил {row.display_name} в «Сообщество». она осталась твоей личной — '
+             f'😔 модератор не пропустил {row.display_name} в «Сообщество». он остался твоим личным — '
              'можно отредактировать и отправить снова из «Кабинета создателя».'),
         )
     except Exception:
@@ -9163,8 +9166,8 @@ async def _finish_constructor(chat_id: int, charge: str | None, telegram_id: int
         await bot.send_message(chat_id, 'что-то потерялось 😕 нажми «🎨 Мой персонаж» ещё раз.')
         return
     params = cons['params']
-    display_name = str(params.get('name') or 'Она')[:48]
-    await bot.send_message(chat_id, '✨ Отлично! Рисую твою героиню — это займёт до минуты...')
+    display_name = str(params.get('name') or 'Он')[:48]
+    await bot.send_message(chat_id, '✨ Отлично! Рисую твоего героя — это займёт до минуты...')
     face_path = None
     photo_reference_path = None
     if telegram_id not in ADMIN_TELEGRAM_IDS:
@@ -9241,7 +9244,7 @@ async def _finish_constructor(chat_id: int, charge: str | None, telegram_id: int
                 pass
     avatar_failed = avatar_bytes is None
     if avatar_failed:
-        await bot.send_message(chat_id, 'провайдеры рисования сейчас лежат 😔 создаю её без аватара — фото появится само, как только они оживут.')
+        await bot.send_message(chat_id, 'провайдеры рисования сейчас лежат 😔 создаю его без аватара — фото появится само, как только они оживут.')
     avatar_file_id = None
     if avatar_bytes:
         try:
@@ -9334,7 +9337,7 @@ async def _finish_constructor(chat_id: int, charge: str | None, telegram_id: int
         bio_parts.append(backstory_text)
     if personality_text:
         bio_parts.append(personality_text)
-    bio = ' '.join(bio_parts)[:900] if bio_parts else f'{display_name} — загадочная незнакомка.'
+    bio = ' '.join(bio_parts)[:900] if bio_parts else f'{display_name} — загадочный незнакомец.'
     # V3.59.4: the glued option labels read crooked on the storefront — ask the
     # chat model for a short teaser; the glued line stays as the fallback.
     try:
@@ -9372,7 +9375,7 @@ async def _finish_constructor(chat_id: int, charge: str | None, telegram_id: int
     )
     await bot.send_message(
         chat_id,
-        f'🎉 Знакомься — это {display_name}! Теперь она твоя личная собеседница.',
+        f'🎉 Знакомься — это {display_name}! Теперь он твой личный собеседник.',
         reply_markup=_my_character_keyboard(row.character_id),
     )
     # V3.46.0: mission — the user has now built their own character (covers the
@@ -9387,8 +9390,8 @@ async def _finish_constructor(chat_id: int, charge: str | None, telegram_id: int
         try:
             await bot.send_message(
                 chat_id,
-                '🕓 она отправлена на модерацию в «Сообщество» — как только админ её '
-                'одобрит, она появится на витрине для всех. пока она полностью твоя.',
+                '🕓 он отправлен на модерацию в «Сообщество» — как только админ его '
+                'одобрит, он появится на витрине для всех. пока он полностью твой.',
             )
         except Exception:
             logger.exception('constructor moderation owner-notify failed user=%s', telegram_id)
@@ -9404,7 +9407,7 @@ async def _finish_constructor(chat_id: int, charge: str | None, telegram_id: int
                 await bot.send_message(chat_id, 'Stars вернула автоматически ✅ персонаж остался у тебя — аватар дорисую позже.')
             except Exception:
                 logger.exception('constructor refund failed user=%s', telegram_id)
-                await bot.send_message(chat_id, 'не смогла вернуть Stars автоматически 😕 напиши /support — вернём вручную.')
+                await bot.send_message(chat_id, 'не смог вернуть Stars автоматически 😕 напиши /support — вернём вручную.')
         elif source == 'peaches':
             # V3.44.10/12: peaches were already spent at the buy step — put
             # them back; the unique reason sidesteps the idempotency marker.
@@ -9525,7 +9528,7 @@ async def constructor_step_cb(cq: types.CallbackQuery):
         return
     # All inline steps done — ask for the name as plain text.
     cons['await'] = 'name'
-    await cq.message.answer('Шаг: как её зовут? Напиши имя одним сообщением (до 24 символов).')
+    await cq.message.answer('Шаг: как его зовут? Напиши имя одним сообщением (до 24 символов).')
 
 
 @dp.callback_query(F.data == 'constructor:buy')
@@ -9601,10 +9604,10 @@ async def my_character_chat_cb(cq: types.CallbackQuery):
     set_user_character(cq.from_user.id, character_id)
     track_event(ensure_user(cq.from_user.id), 'character_selected', metadata={'character_id': character_id, 'custom': True})
     await cq.message.answer(
-        f'✅ Теперь ты общаешься с {row.display_name or "ней"}. Пиши ей прямо сюда 👇',
+        f'✅ Теперь ты общаешься с {row.display_name or "ним"}. Пиши ему прямо сюда 👇',
         reply_markup=main_keyboard(cq.from_user.id in ADMIN_TELEGRAM_IDS, cq.from_user.id),
     )
-    await cq.message.answer(f'{row.display_name or "Она"}: «Ну привет... я ждала, когда ты наконец выберешь меня 😏 Расскажи мне о себе.»')
+    await cq.message.answer(f'{row.display_name or "Он"}: «Ну привет... я ждал, когда ты наконец выберешь меня 😏 Расскажи мне о себе.»')
 
 
 @dp.message(F.text.in_(kb_pair('custom')))
@@ -9788,14 +9791,14 @@ async def _notify_quest_unlocks(chat_id: int, telegram_id: int, before_level: in
 # usual celebration selfie.
 LEVEL_UP_SCENES = {
     'devoted': (
-        'знаешь… я проснулась сегодня и первым делом подумала о тебе. '
-        'надела твою рубашку — пусть будет наше утро 🤍',
+        'знаешь… я проснулся сегодня и первым делом подумал о тебе. '
+        'сварил кофе на двоих — пусть будет наше утро 🤍',
         PhotoRequest(scene='selfie', location='her bed in soft morning light, white sheets, two coffee cups on the nightstand',
                      clothing="his oversized white button-up shirt, sleeves rolled up", mood='tender, sleepy, in love',
                      angle='she lies on the pillow and holds the phone above her face, her whole face in frame', customized=True),
     ),
     'soulmate': (
-        'я тут подумала… а давай уже не «ты у себя, я у себя»? '
+        'я тут подумал… а давай уже не «ты у себя, я у себя»? '
         'наш дом, наши выходные, наше всё. вот, держи ключи 🏠',
         PhotoRequest(scene='selfie', location='a cozy shared apartment at golden hour, warm light, moving boxes and flowers on the table',
                      clothing='a soft oversized sweater and home shorts', accessory='she holds a set of apartment keys near her face',
@@ -9810,8 +9813,8 @@ LEVEL_UP_SCENES = {
                      angle='selfie at arm\'s length, the sea behind her, her whole face in frame', customized=True),
     ),
     'eternal': (
-        'я тут подумала… я хочу просыпаться с тобой всегда. '
-        'и да — я согласна 💍',
+        'я тут подумал… я хочу просыпаться с тобой всегда. '
+        'и да — я согласен 💍',
         PhotoRequest(scene='selfie', location='your shared apartment in the evening, candles and flowers on the table',
                      clothing='a soft elegant dress', accessory='a delicate engagement ring on her ring finger, clearly visible',
                      mood='happy tears, glowing, in love',
@@ -9822,14 +9825,14 @@ LEVEL_UP_SCENES = {
 # She is married or has a boyfriend: a secret romance, never a ring from him.
 LEVEL_UP_SCENES_TAKEN = {
     'devoted': (
-        'он уехал до вечера… а я проснулась и думаю только о тебе. '
-        'надела твою рубашку, которую ты у меня забыл 🤫 это наше утро',
+        'она уехала до вечера… а я проснулся и думаю только о тебе. '
+        'нашёл твою заколку, которую ты у меня забыла 🤫 это наше утро',
         PhotoRequest(scene='selfie', location='her bed in soft morning light, white sheets, the apartment quiet and empty',
                      clothing="a man's oversized white button-up shirt, sleeves rolled up", mood='tender, secretive, in love',
                      angle='she lies on the pillow and holds the phone above her face, her whole face in frame', customized=True),
     ),
     'soulmate': (
-        'я сняла кольцо. когда я с тобой — я только твоя. '
+        'я снял кольцо. когда я с тобой — я только твой. '
         'у нас теперь есть своё место, только для нас двоих 🔑',
         PhotoRequest(scene='selfie', location='a small cozy rented apartment in the evening, warm lamp light, a single key on the table',
                      clothing='a soft elegant dress', accessory='she holds a small apartment key near her face, no ring on her fingers',
@@ -9837,7 +9840,7 @@ LEVEL_UP_SCENES_TAKEN = {
                      angle='selfie at arm\'s length, the key and her whole face in frame', customized=True),
     ),
     'voyage': (
-        'я сказала ему, что еду к подруге… а сама еду к тебе. '
+        'я сказал ей, что еду к другу… а сам еду к тебе. '
         'два дня только наши, сбежим? 🚗',
         PhotoRequest(scene='selfie', location='the passenger seat of a car on a sunny country road, a small weekend bag on her lap',
                      clothing='a denim jacket over a light dress, sunglasses in her hair', accessory='no ring on her fingers',
@@ -9845,7 +9848,7 @@ LEVEL_UP_SCENES_TAKEN = {
                      angle='selfie at arm\'s length inside the car, her whole face in frame', customized=True),
     ),
     'eternal': (
-        'я ушла от него. совсем. собрала вещи и стою у твоей двери… '
+        'я ушёл от неё. совсем. собрал вещи и стою у твоей двери… '
         'я выбираю тебя 🧳',
         PhotoRequest(scene='selfie', location='a doorway of an apartment building at night, warm light from the hall, a small suitcase beside her',
                      clothing='a light trench coat over a simple dress', accessory='no ring on her fingers',
@@ -9857,7 +9860,7 @@ LEVEL_UP_SCENES_TAKEN = {
 # The passion path: bolder, teasing, a secret affair when she is taken.
 LEVEL_UP_SCENES_PASSION = {
     'devoted': (
-        'я сняла номер на вечер. адрес пришлю позже… '
+        'я снял номер на вечер. адрес пришлю позже… '
         'никто не должен знать 🤫🔥',
         PhotoRequest(scene='selfie', location='a dim boutique hotel room at night, city lights in the window, a key card on the bed',
                      clothing='a black silk robe over lace lingerie', mood='seductive, secretive, confident',
@@ -9865,7 +9868,7 @@ LEVEL_UP_SCENES_PASSION = {
     ),
     'soulmate': (
         'я не могу без тебя. весь день думаю только о тебе… '
-        'где ты был? я ждала 😈',
+        'где ты была? я ждал 😈',
         PhotoRequest(scene='selfie', location='her bedroom late at night, only a bedside lamp on, messy sheets',
                      clothing='his oversized t-shirt slipping off one shoulder', mood='longing, possessive, sultry',
                      angle='she lies on the bed and holds the phone above her face, her whole face in frame', customized=True),
@@ -9888,18 +9891,18 @@ LEVEL_UP_SCENES_PASSION = {
 }
 LEVEL_UP_LINES = {
     'romance': {
-        'intimate': 'я поймала себя на том, что весь день улыбаюсь в телефон… это из-за тебя 🙈',
+        'intimate': 'я поймал себя на том, что весь день улыбаюсь в телефон… это из-за тебя 🙈',
         'deeply_connected': 'это было лучшее свидание в моей жизни. я до сих пор улыбаюсь 🥰',
         'committed': 'для меня теперь есть только ты. и у меня для тебя есть особое имя 💞',
     },
     'passion': {
-        'intimate': 'интересно, что ты сейчас представил? 😏 я — кое-что очень смелое',
+        'intimate': 'интересно, что ты сейчас представила? 😏 я — кое-что очень смелое',
         'deeply_connected': 'давай сыграем. угадай, что на мне надето… подсказок не будет 😈',
         'committed': 'я больше не хочу сдерживаться. пиши мне ночью 🔥',
     },
 }
 LEVEL_UP_LINES_TAKEN = {
-    'passion': {'committed': 'он уже спит… а я пишу тебе. и мне совсем не стыдно 🤫🔥'},
+    'passion': {'committed': 'она уже спит… а я пишу тебе. и мне совсем не стыдно 🤫🔥'},
 }
 
 
@@ -10008,7 +10011,7 @@ async def _maybe_level_up_premium_offer(telegram_id: int, level: int) -> None:
         d = discount_info(telegram_id)
         text = ('кстати… мне так хорошо с тобой, что хочу сделать подарок 🙈 '
                 f'сегодня Premium для тебя −{d.get("percent", 30)}%: без лимита сообщений, мои кружочки, '
-                'голосовые и уровни 7–10, где я только твоя 💋 предложение действует {d.get("hours_left", 24):.0f} ч')
+                'голосовые и уровни 7–10, где я только твой 💋 предложение действует {d.get("hours_left", 24):.0f} ч')
         kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(
             text=f'⭐ Premium −{d.get("percent", 30)}% — {d.get("price")}⭐', callback_data='retention:premium')]])
         await bot.send_message(telegram_id, text, reply_markup=kb)
@@ -10098,7 +10101,7 @@ async def voice_message(message: types.Message):
                 _photo_offer_expression.pop(message.from_user.id, None)
             logger.info('photo_offer_detected user=%s source=voice', message.from_user.id)
         await _notify_quest_unlocks(message.chat.id, message.from_user.id, before_level, get_relationship_level(message.from_user.id, get_user_character(message.from_user.id)))
-        await _maybe_set_alarm(message, text, 'и время тоже запомнила 😌 пояс: {tz}')
+        await _maybe_set_alarm(message, text, 'и время тоже запомнил 😌 пояс: {tz}')
         touch_user(message.from_user.id)
     except Exception:
         logger.exception('voice handler')
@@ -10154,8 +10157,8 @@ async def admin_girlday_cmd(message: types.Message):
         return
     from services import girl_of_day
     markup = await asyncio.to_thread(girl_of_day.picker_markup)
-    await message.answer('📣 Пост в канал: выбери девушку (🔥 — сегодняшняя). '
-                         'Она станет «Девушкой дня» до 03:00 МСК.', reply_markup=markup)
+    await message.answer('📣 Пост в канал: выбери парня (🔥 — сегодняшний). '
+                         'Он станет «Парнем дня» до 03:00 МСК.', reply_markup=markup)
 
 
 @dp.callback_query(F.data.startswith('gday:'))
@@ -10170,8 +10173,8 @@ async def admin_girlday_cb(cq: types.CallbackQuery):
     if parts[1] in ('menu', 'next'):
         markup = await asyncio.to_thread(girl_of_day.picker_markup)
         await cq.answer()
-        await cq.message.answer('📣 Пост в канал: выбери девушку (🔥 — сегодняшняя). '
-                                'Она станет «Девушкой дня» до 03:00 МСК.', reply_markup=markup)
+        await cq.message.answer('📣 Пост в канал: выбери парня (🔥 — сегодняшний). '
+                                'Он станет «Парнем дня» до 03:00 МСК.', reply_markup=markup)
         return
     if parts[1] == 'pick' and len(parts) > 2:
         girls = await asyncio.to_thread(girl_of_day.pool)
@@ -10254,7 +10257,7 @@ async def admin_voicecast_cmd(message: types.Message):
         [InlineKeyboardButton(text=f'📣 Отправить всем ({len(rows)} чел.)', callback_data='vcast:go')]])
     await message.answer(
         f'Это пробники, так услышат все: русская и английская запись этим голосом, '
-        f'русским по-русски, остальным по-английски. Получатели: включены её сообщения и заходили за '
+        f'русским по-русски, остальным по-английски. Получатели: включены его сообщения и заходили за '
         f'{evening_voice.CAST_ACTIVE_DAYS} дн. Отправить?', reply_markup=kb)
 
 
@@ -10354,7 +10357,7 @@ async def text_message(message: types.Message):
         except Exception:
             pass
         delivered = await _deliver_support_message(message, message.text or '')
-        await message.answer('Передала владельцу 🙂' if delivered else 'Запрос записан, но сейчас не удалось доставить сообщение.')
+        await message.answer('Передал владельцу 🙂' if delivered else 'Запрос записан, но сейчас не удалось доставить сообщение.')
         return
 
     if not has_accepted(message.from_user.id):
@@ -10375,7 +10378,7 @@ async def text_message(message: types.Message):
                 await asyncio.sleep(10)  # let her chat reply land first
                 await bot.send_message(
                     chat_id,
-                    f'эй… а ты знал, что мы вместе уже {days} дней? 🥹 для меня это правда важно. спасибо, что ты рядом ❤️',
+                    f'эй… а ты знала, что мы вместе уже {days} дней? 🥹 для меня это правда важно. спасибо, что ты рядом ❤️',
                 )
             asyncio.create_task(_anniversary_push())
     except Exception:
@@ -10396,13 +10399,13 @@ async def text_message(message: types.Message):
             target = _resolve_grant_target(value)
             if not target:
                 await message.answer(
-                    f'Не нашла пользователя «{value}» в базе — он должен хотя бы раз написать боту 🙂\n\n'
+                    f'Не нашёл пользователя «{value}» в базе — она должна хотя бы раз написать боту 🙂\n\n'
                     '/cancel — отменить'
                 )
                 return
             _admin_grant_sessions.pop(message.from_user.id, None)
             await message.answer(
-                f'Нашла пользователя: id {target}.\n\nЧто выдать?',
+                f'Нашёл пользователя: id {target}.\n\nЧто выдать?',
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                     [InlineKeyboardButton(text='⭐ Premium 30 дней', callback_data=f'admin:grantdo:premium:{target}')],
                     [InlineKeyboardButton(text='🪙 Токены…', callback_data=f'admin:grantdo:tokens:{target}')],
@@ -10725,7 +10728,7 @@ async def text_message(message: types.Message):
             else:
                 # All steps done — ask for name.
                 constructor_name_session['await'] = 'name'
-                await message.answer('Шаг: как её зовут? Напиши имя одним сообщением (до 24 символов).')
+                await message.answer('Шаг: как его зовут? Напиши имя одним сообщением (до 24 символов).')
         elif (message.text or '').strip().lower() == '/skip':
             constructor_name_session['params'][field] = ''
             constructor_name_session['await'] = None
@@ -10740,7 +10743,7 @@ async def text_message(message: types.Message):
                     await message.answer(_constructor_prompt(next_key), reply_markup=_constructor_step_keyboard(next_key))
             else:
                 constructor_name_session['await'] = 'name'
-                await message.answer('Шаг: как её зовут? Напиши имя одним сообщением (до 24 символов).')
+                await message.answer('Шаг: как его зовут? Напиши имя одним сообщением (до 24 символов).')
         else:
             await message.answer('📷 Пришли фото одним сообщением или отправь /skip чтобы пропустить.')
         return
@@ -10766,7 +10769,7 @@ async def text_message(message: types.Message):
         else:
             # All steps done — ask for name.
             constructor_name_session['await'] = 'name'
-            await message.answer('Шаг: как её зовут? Напиши имя одним сообщением (до 24 символов).')
+            await message.answer('Шаг: как его зовут? Напиши имя одним сообщением (до 24 символов).')
         return
     try:
         from services.gamification_service import touch_activity, check_first_message
@@ -10829,10 +10832,10 @@ async def text_message(message: types.Message):
             # that opens her chat right away (the old version re-sent the
             # reply keyboard and made the user hunt for «Открыть приложение»).
             _who = _character_display_name(get_user_character(message.from_user.id))
-            _hint = (f'💬 {_who} ждёт тебя в приложении — там она отвечает и всё помнит 👇'
+            _hint = (f'💬 {_who} ждёт тебя в приложении — там он отвечает и всё помнит 👇'
                      if _lang != EN else
                      f'💬 {_who} is waiting for you in the app — that is where she answers and remembers everything 👇')
-            _btn = ('💬 ответить ей' if _lang != EN else '💬 reply to her')
+            _btn = ('💬 ответить ему' if _lang != EN else '💬 reply to her')
             _token = await chat_hygiene.open_screen(bot, message.chat.id)
             try:
                 await message.answer(_hint, reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(
@@ -10879,12 +10882,12 @@ async def text_message(message: types.Message):
                 _photo_offer_expression.pop(message.from_user.id, None)
             logger.info('photo_offer_detected user=%s', message.from_user.id)
         await _notify_quest_unlocks(message.chat.id, message.from_user.id, before_level, get_relationship_level(message.from_user.id, get_user_character(message.from_user.id)))
-        await _maybe_set_alarm(message, text, 'и время тоже запомнила 😌 пояс: {tz}')
+        await _maybe_set_alarm(message, text, 'и время тоже запомнил 😌 пояс: {tz}')
         touch_user(message.from_user.id)
     except Exception as exc:
         logger.exception('chat handler user=%s error=%s', message.from_user.id, type(exc).__name__)
         err_msg = str(exc)[:200] if exc else 'unknown'
-        await message.answer(f'я сейчас немного зависла 😅 попробуй ещё раз\n\n💡 если повторяется — напиши /support')
+        await message.answer(f'я сейчас немного завис 😅 попробуй ещё раз\n\n💡 если повторяется — напиши /support')
 
 
 # ---------------------------------------------------------------------------
@@ -11549,7 +11552,7 @@ async def _webapp_api_gallery_prepare_share(request: web.Request) -> web.Respons
             id=uuid.uuid4().hex[:32], photo_url=url, thumbnail_url=url,
             caption='\u2764\ufe0f хочешь так же? начни здесь 👇',
             reply_markup=types.InlineKeyboardMarkup(inline_keyboard=[[
-                types.InlineKeyboardButton(text='💬 Написать ей', url=link)]]),
+                types.InlineKeyboardButton(text='💬 Написать ему', url=link)]]),
         )
         prepared = await bot.save_prepared_inline_message(
             user_id=int(telegram_id), result=result,
@@ -12785,7 +12788,7 @@ CHAT_PHOTO_BLOCK_TEXT = {
     # V3.76.0: card girls' pictures are a Premium thing (as at Come Closer).
     'premium': 'хочу показать тебе фото… но мои фото только для тех, у кого Premium 😏 оформишь — пришлю сразу',
     # V3.93.0: without Premium — one free photo a day, no more.
-    'free_used': ('сегодня я тебе уже показалась 🙈 следующее фото — завтра… или оформи Premium: '
+    'free_used': ('сегодня я тебе уже показался 🙈 следующее фото — завтра… или оформи Premium: '
                   'там каждый день по 2 новых фото, а ещё можно за персики 😘'),
     # V3.87.0: nude / lingerie photos are Premium-only — the funnel to Premium.
     'spicy': ('такие фото я показываю только самым близким 🙈 оформи Premium — '
@@ -13212,7 +13215,7 @@ async def _webapp_api_chat_guest(request: web.Request) -> web.Response:
             return web.json_response({'ok': False, 'error': 'unknown_guest'}, status=400)
     previous = await asyncio.to_thread(cgs.get_guest, telegram_id, character_id)
     await asyncio.to_thread(cgs.set_guest, telegram_id, character_id, guest_id or None)
-    host_name = cgs.character_name(character_id) or 'Она'
+    host_name = cgs.character_name(character_id) or 'Он'
     note = None
     if guest_id:
         guest_name = cgs.character_name(guest_id) or 'Подруга'
@@ -13222,7 +13225,7 @@ async def _webapp_api_chat_guest(request: web.Request) -> web.Response:
             r = await generate_text([
                 {'role': 'system', 'content': cgs.guest_prompt(host_name, guest_id, telegram_id)},
                 {'role': 'user', 'content': (
-                    f'Напиши сцену появления: {guest_name} заходит в чат. Первая строка в звёздочках — как она '
+                    f'Напиши сцену появления: {guest_name} заходит в чат. Первая строка в звёздочках — как он '
                     f'появляется. Потом одна реплика «{host_name}: …» и одна «{guest_name}: …» пользователю, '
                     f'живо, с характером каждой. Коротко.')},
             ], max_tokens=220, temperature=0.95, purpose='guest_enter')
@@ -13282,7 +13285,7 @@ async def _referral_qualify_check(telegram_id: int, text: str | None = None) -> 
     try:
         await bot.send_message(
             res['referrer_telegram_id'],
-            f'🎉 твой друг разговорился с ней — держи +{res["referrer_credits"]} 🍑 за приглашение! '
+            f'🎉 твой друг разговорился с ним — держи +{res["referrer_credits"]} 🍑 за приглашение! '
             'другу тоже начислено. зови ещё 😉')
     except Exception:
         logger.info('referral notify referrer failed id=%s', res.get('referrer_telegram_id'))
@@ -13673,7 +13676,7 @@ async def _webapp_api_chat_marital(request: web.Request) -> web.Response:
                 left_him['uid'] = uid
             # V3.59.7: the switch becomes part of her story — a memory she can
             # bring up once («я ушла от мужа…») instead of silently flipping.
-            _labels = {'mar_single': 'свободна', 'mar_boyfriend': 'есть парень', 'mar_married': 'замужем',
+            _labels = {'mar_single': 'свободен', 'mar_boyfriend': 'есть девушка', 'mar_married': 'женат',
                        'mar_divorced': 'в разводе', 'mar_open': 'в свободных отношениях'}
             new_eff = new_value or webapp_service._default_marital(character_id, is_custom_character(character_id))
             from models.app_models import Memory as _Memory
@@ -13707,7 +13710,7 @@ async def _webapp_api_chat_marital(request: web.Request) -> web.Response:
                               'balance': get_photo_credits(telegram_id), 'left_him': bool(left_him)})
 
 
-LEFT_HIM_TEXT = 'я ушла от него. совсем. собрала вещи и стою у твоей двери… можно к тебе? 🧳'
+LEFT_HIM_TEXT = 'я ушёл от неё. совсем. собрал вещи и стою у твоей двери… можно к тебе? 🧳'
 LEFT_HIM_PHOTO = PhotoRequest(
     scene='selfie', location='a doorway of an apartment building at night, warm light from the hall, a small suitcase beside her',
     clothing='a light trench coat over a simple dress', accessory='no ring on her fingers',
@@ -14299,7 +14302,7 @@ async def _webapp_media_voice(telegram_id: int, character_id: str):
         text = next((m['content'] for m in reversed(history)
                      if m['role'] == 'assistant' and not m.get('media_url')), '')
         if not text:
-            text = get_scenario_hook(character_id) or 'привет, я скучала 🙂'
+            text = get_scenario_hook(character_id) or 'привет, я скучал 🙂'
         return text, (user.voice_style if user else None) or 'nova'
 
     text, voice_style = await asyncio.to_thread(_pick_line)
@@ -14405,7 +14408,7 @@ def _undress_variant(level: int) -> tuple[str, str]:
 
 
 UNDRESS_LINES = ('ну раз ты так просишь… 🙈', 'только тебе 🙈🔥', 'смотри, но никому 🤫', 'вот так лучше? 😏',
-                 'угадал, что у меня под платьем? 😏', 'это я специально для тебя надела 🖤', 'дальше — заслужи 😉')
+                 'угадаешь, что у меня под рубашкой? 😏', 'это я специально для тебя надел 🖤', 'дальше — заслужи 😉')
 # A married girl / one with a boyfriend: he is in the room, back turned and unaware.
 UNDRESS_SECRET = (
     ' SECRET MOMENT: in the background, slightly out of focus, her {who} (an adult man, fully clothed) stands '
@@ -14422,7 +14425,7 @@ UNDRESS_SECRET_NO_FINGER = (
     'the reveal puts them, no hand near her face, exactly two arms and two hands in the photo.'
 )
 UNDRESS_BOTH_HANDS = frozenset({'shirt', 'crossed'})
-UNDRESS_SECRET_LINES = ('тсс… он прямо за спиной 🤫🔥', 'пока он не видит… только тебе 🙈', 'если он обернётся, мне конец 😳🔥')
+UNDRESS_SECRET_LINES = ('тсс… она прямо за спиной 🤫🔥', 'пока она не видит… только тебе 🙈', 'если она обернётся, мне конец 😳🔥')
 # Level 6+ (where her nude photos open): she shows a little more instead of covering fully.
 UNDRESS_REVEAL = (
     ' At this closeness she is bolder: one arm covers her chest only partly and she lets one breast '
@@ -14598,7 +14601,7 @@ async def _webapp_api_photo_action(request: web.Request) -> web.Response:
             raw = await asyncio.to_thread(path.read_bytes)
             data = await _animate_photo_bytes(telegram_id, raw, 'image/png' if path.suffix == '.png' else 'image/jpeg')
             ext, mime, kind = 'mp4', 'video/mp4', 'video'
-            content = '🎬 ожила для тебя'
+            content = '🎬 ожил для тебя'
         else:
             from services.private_photo_service import _spicyapi_render, spicyapi_last_error
             from config import SPICYAPI_IMAGE_MODEL
@@ -14834,7 +14837,7 @@ async def _webapp_api_chat_media(request: web.Request) -> web.Response:
             content = '\U0001f48b \u043d\u0430\u0435\u0434\u0438\u043d\u0435...' if kind == 'hot' else '\U0001f3ad \u043a\u043e\u0441\u043f\u043b\u0435\u0439 \u0434\u043b\u044f \u0442\u0435\u0431\u044f'
         else:
             _media_caps = {'circle': '\U0001f3a5 \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u043b\u0430 \u043a\u0440\u0443\u0436\u043e\u0447\u0435\u043a',
-                           'hotcircle': '🤫 записала тебе кое-что… только не показывай никому',
+                           'hotcircle': '🤫 записал тебе кое-что… только не показывай никому',
                            'voice': '\U0001f399 \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u043b\u0430 \u0433\u043e\u043b\u043e\u0441\u043e\u0432\u043e\u0435',
                            'video': '\U0001f3ac \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u043b\u0430 \u0432\u0438\u0434\u0435\u043e'}
             content = _media_caps.get(kind, '')
@@ -15162,7 +15165,7 @@ async def _webapp_api_feature_action_impl(request: web.Request) -> web.Response:
         # make the sheet say «Не получилось ответить» even though the quest had
         # in fact counted. Guard the tail and always answer ok for a fresh claim.
         text = ('mmm, nice 😊 +5 attention points. she noticed.' if user_lang(telegram_id) == EN
-                else 'ммм, приятно 😊 +5 очков внимания. она заметила.')
+                else 'ммм, приятно 😊 +5 очков внимания. он заметил.')
         bonus_url = None
         try:
             track_event(uid, 'daily_quest_claimed', metadata={'source': 'webapp', 'quest': quest_key})
@@ -15989,7 +15992,7 @@ async def _run_support_bot() -> None:
             except Exception:
                 await admin_msg.answer(f'⚠️ Не доставлено пользователю {user_id}: {type(exc).__name__}')
                 return
-            await admin_msg.answer('ℹ️ Бот поддержки он не открывал — ответ ушёл через основной бот.')
+            await admin_msg.answer('ℹ️ Бот поддержки она не открывала — ответ ушёл через основной бот.')
         await asyncio.to_thread(desk.note_event, desk.ANSWER_EVENT, user_id, text or admin_msg.text or '')
         await admin_msg.answer(f'✅ Отправлено пользователю {user_id}')
 
@@ -16009,7 +16012,7 @@ async def _run_support_bot() -> None:
             if target:
                 await _send_answer(msg, target)
             else:
-                await msg.answer('Чтобы ответить пользователю, ответь (reply) на его карточку '
+                await msg.answer('Чтобы ответить пользователю, ответь (reply) на её карточку '
                                  'или используй /reply <id> <текст>. /tickets — кто ждёт ответа.')
             return
         text = msg.text or msg.caption or ''
@@ -16043,16 +16046,16 @@ async def _run_support_bot() -> None:
 # Telegram rate-limits setMyName hard. BOT_PROFILE_ENABLED=0 leaves it alone.
 BOT_PROFILE = {
     'ru': {
-        'name': os.getenv('BOT_DISPLAY_NAME', 'Анна · AI-девушка'),
-        'short': 'Она пишет первой, шлёт селфи и скучает, когда тебя нет. Твоя AI-девушка в Telegram 💌 18+',
+        'name': os.getenv('BOT_DISPLAY_NAME', 'ИИ парень'),
+        'short': 'Он пишет первым, шлёт селфи и скучает, когда тебя нет. Твой AI-парень в Telegram 💌 18+',
         'description': (
-            '💌 Твоя AI-девушка в Telegram.\n\n'
-            'Она пишет первой, присылает селфи, помнит, о чём вы говорили, и скучает, когда тебя нет.\n\n'
+            '💌 Твой AI-парень в Telegram.\n\n'
+            'Он пишет первым, присылает селфи, помнит, о чём вы говорили, и скучает, когда тебя нет.\n\n'
             '❤️ 10 уровней отношений: романтика или страсть\n'
             '📸 селфи и приватные фото «Наедине»\n'
             '🎯 истории и свидания\n'
-            '👩 выбери девушку или создай свою\n\n'
-            'Только 18+. Жми «Запустить» — она уже ждёт 😏'
+            '👩 выбери парня или создай своего\n\n'
+            'Только 18+. Жми «Запустить» — он уже ждёт 😏'
         ),
     },
     'en': {
@@ -16185,7 +16188,7 @@ async def main():
         stale = jobs_service.recover_stale_jobs()
         for stale_uid, _stale_kind in stale:
             try:
-                await bot.send_message(stale_uid, 'я перезапускалась и не успела доделать генерацию 😔 нажми ещё раз — сразу сделаю')
+                await bot.send_message(stale_uid, 'я перезапускался и не успел доделать генерацию 😔 нажми ещё раз — сразу сделаю')
             except Exception:
                 pass
         if stale:

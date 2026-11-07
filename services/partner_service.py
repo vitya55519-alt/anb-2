@@ -397,5 +397,5 @@ def partner_nudge_text(lang: str, link: str) -> str:
 def partner_share_url(lang: str, link: str) -> str:
     from urllib.parse import quote
     text = ('My AI girlfriend in Telegram — try it 😏' if lang == 'en'
-            else 'Моя AI-девушка в Telegram — попробуй 😏')
+            else 'Мой AI-парень в Telegram — попробуй 😏')
     return f'https://t.me/share/url?url={quote(link, safe="")}&text={quote(text, safe="")}'

@@ -49,6 +49,6 @@ def voice_samples_block(character_id: str | None, name: str = '') -> str:
     ]
     who = name or 'Ты'
     for user_line, her_line in samples:
-        lines.append(f'Он: {user_line}')
+        lines.append(f'Она: {user_line}')
         lines.append(f'{who}: ' + her_line.replace('\n\n', ' / '))
     return '\n'.join(lines)

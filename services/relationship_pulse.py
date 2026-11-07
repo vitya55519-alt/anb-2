@@ -25,7 +25,7 @@ PULSE_EVERY = 8
 _PULSE_EVENTS = {'callback', 'inside_joke', 'meaningful_share', 'care', 'warm_flirt'}
 
 _PULSE_PROMPT = (
-    'Оцени последний фрагмент переписки пользователя с девушкой (AI-компаньон). '
+    'Оцени последний фрагмент переписки пользователя с парнем (AI-компаньон). '
     'Ответь СТРОГО одним JSON-объектом без пояснений: '
     '{"warmth": 0-3, "trust": 0-3, "intimacy": 0-3, "events": []}. '
     'warmth — теплота и вовлечённость; trust — личная открытость и доверие; intimacy — взаимный флирт. '
@@ -77,7 +77,7 @@ async def maybe_pulse(telegram_id: int, user_name: str, character_id: str = CHAR
         from services.memory_service import get_recent_messages
         history = get_recent_messages(uid, character_id, 12)
         excerpt = '\n'.join(
-            f"{'Пользователь' if m.get('role') == 'user' else 'Она'}: {m.get('content', '')[:200]}"
+            f"{'Пользователь' if m.get('role') == 'user' else 'Он'}: {m.get('content', '')[:200]}"
             for m in history if isinstance(m, dict) and m.get('content')
         )
         if not excerpt.strip():

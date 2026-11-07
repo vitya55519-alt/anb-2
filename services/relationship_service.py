@@ -56,12 +56,12 @@ async def record_user_message(user_id, user_name, relationship=0, trust=0, intim
         context = build_relationship_context(row, get_milestones(s, row), character_id, _marital(user_id, character_id))
         if reconnect_days:
             context += (
-                f' Пользователь вернулся после {reconnect_days} дней тишины: можно тепло и естественно отметить, '
-                'что ты заметила его отсутствие и рада возвращению, без системных формулировок и без упрёка.'
+                f' Пользователь вернулась после {reconnect_days} дней тишины: можно тепло и естественно отметить, '
+                'что ты заметила её отсутствие и рад возвращению, без системных формулировок и без упрёка.'
             )
         # V3.21.0: from level 3 she has a pet name for him — use it naturally.
         if user.pet_name:
-            context += f' Ты ласково зовёшь его «{user.pet_name}» — иногда естественно используй это обращение.'
+            context += f' Ты ласково зовёшь её «{user.pet_name}» — иногда естественно используй это обращение.'
         if row.stage != old_stage:
             track_event(user.id, 'relationship_level_up', metadata={'from': old_stage, 'to': row.stage}, character_id=character_id)
             context += ' Отношения только что перешли на новый этап: пусть в этой или ближайшей реплике это слегка чувствуется через большее узнавание, тепло или уверенность, но не называй номер уровня и не объявляй системное событие.'

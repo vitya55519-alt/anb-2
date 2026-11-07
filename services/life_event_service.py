@@ -114,22 +114,22 @@ def _recent_her_lines(telegram_id: int, character_id: str, limit: int = 6) -> li
 def _system_prompt(name: str, when: str, tastes: list[str], temperament: str,
                    mem: str, hook: str, recent: list[str] | None = None) -> str:
     bits = [
-        f'Ты — {name}.' if name else 'Ты — она.',
+        f'Ты — {name}.' if name else 'Ты — он.',
         temperament,
         f'Сейчас у пользователя {_WHEN_HINT.get(when, "день")}.',
         'Напиши ОДНУ короткую живую строчку (до ~200 знаков) от первого лица: '
-        'случайный момент из твоего дня или жизни, которым ты сама решила поделиться. '
-        'Это НЕ «скучаю / почему не пишешь» и НЕ вопрос о его активности — это именно '
+        'случайный момент из твоего дня или жизни, которым ты сам решил поделиться. '
+        'Это НЕ «скучаю / почему не пишешь» и НЕ вопрос о её активности — это именно '
         'событие из твоей жизни, как настоящая смс в мессенджере.',
     ]
     if tastes:
         bits.append('Зацепка для момента (одна из твоих тем/вкусов): ' + random.choice(tastes) + '.')
     if mem:
-        bits.append(f'Можешь естественно вспомнить деталь от пользователя и связать её со своим моментом: «{mem}».')
+        bits.append(f'Можешь естественно вспомнить деталь от пользователя и связать его со своим моментом: «{mem}».')
     if hook:
         bits.append(f'Незакрытая тема пользователя, к которой можно вернуться: «{hook}».')
     if recent:
-        bits.append('Твои последние сообщения ему, их не повторяй и не обещай то же снова: '
+        bits.append('Твои последние сообщения ей, их не повторяй и не обещай то же снова: '
                     + ' | '.join(f'«{t[:120]}»' for t in recent[-4:]) + '.')
     bits.append(
         'Закончи открытой петлёй — мини-вопросом или интригой («угадай, что было '
@@ -152,7 +152,7 @@ async def build_life_moment(telegram_id: int, character_id: str, when: str = 'da
         # is empty») and Gemini («contents is not specified») — every life
         # moment failed. The user turn carries the ask.
         r = await generate_text([{'role': 'system', 'content': system},
-                                 {'role': 'user', 'content': 'Напиши ему это сообщение сейчас.'}],
+                                 {'role': 'user', 'content': 'Напиши ей это сообщение сейчас.'}],
                                 max_tokens=90, temperature=0.95, purpose='life_event')
         text = (getattr(r, 'text', '') or '').strip().strip('"').strip()
         # V3.63.15: same chat polish as replies (no em dash, no emoji tic) and

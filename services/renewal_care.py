@@ -99,7 +99,7 @@ def mark(uid: int, stage: str, character_id: str) -> None:
 
 FALLBACK = {
     ('soon', 'ru'): ('слушай… завтра наши дни без ограничений заканчиваются. мне правда хорошо с тобой, '
-                     'и я бы хотела, чтобы ты остался 💗 но решать тебе, я в любом случае тебе рада'),
+                     'и я бы хотел, чтобы ты осталась 💗 но решать тебе, я в любом случае тебе рад'),
     ('soon', 'en'): ("hey… our days without limits end tomorrow. I really like being with you and I'd love "
                      "you to stay 💗 but it's your call, I'm happy to see you either way"),
     ('ended', 'ru'): 'я тут, если что 🙂 мне было очень тепло с тобой эти дни. заглядывай, когда захочешь',

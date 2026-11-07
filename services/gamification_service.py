@@ -40,7 +40,7 @@ ACHIEVEMENTS = {
     'photo_collector': ('Коллекционер', 'Открыли все фото одного уровня', [('scene', 'ach_photo_collector')]),
     'premium_member': ('Premium', 'Оформили подписку Premium', []),
     'hundred_messages': ('100 сообщений', 'Общались более 100 раз', [('scene', 'ach_hundred')]),
-    'first_gift': ('Первый подарок', 'Подарили ей первый подарок', []),
+    'first_gift': ('Первый подарок', 'Подарили ему первый подарок', []),
     'first_date': ('Первое свидание', 'Сходили на первое свидание', []),
     'ten_dates': ('10 свиданий', 'Десять свиданий — настоящий роман', [('voucher', None)]),
     'date_collector': ('Сердцеед', 'Прошли все свидания из каталога', [('scene', 'ach_date_collector')]),
@@ -96,7 +96,7 @@ TEN_DATES = 10
 # «а», «ок» or one pasted line sent ten times earn nothing.
 # key → (name, description, messages needed, minimum span in minutes, peaches)
 DAILY_MISSIONS: dict[str, tuple[str, str, int, int, int]] = {
-    'daily_chat': ('Поболтай с ней', '10 сообщений за день', 10, 0, 100),
+    'daily_chat': ('Поболтай с ним', '10 сообщений за день', 10, 0, 100),
     'daily_long': ('Долгий разговор', '25 сообщений, разговор от 20 минут', 25, 20, 100),
 }
 # a conversation day for the streak needs this many real messages
@@ -336,7 +336,7 @@ MISSION_CTA: dict[str, tuple[str, str]] = {
     # V3.47.1: cover the remaining actionable missions with verified live
     # handlers so a tap in the chat roadmap always lands somewhere real.
     'premium_member': ('⭐ Оформить Premium', 'buy:premium'),
-    'first_message': ('💬 Написать ей', 'private_photo:start'),
+    'first_message': ('💬 Написать ему', 'private_photo:start'),
     'hundred_messages': ('💬 Продолжить общение', 'photo_menu:open'),
     'voice_user': ('🎙 Голос и фото', 'private_photo:start'),
     'first_gift': ('🎁 Сюжеты и свидания', 'quest:list'),

@@ -507,7 +507,7 @@ async def _first_offer(bot):
             card=await asyncio.to_thread(fos.locked_card,source,label)
             buttons=[[InlineKeyboardButton(text='🔓 open' if lang==EN else '🔓 открыть',callback_data='first_offer:open')]]
             if PUBLIC_BASE_URL:
-                buttons.append([InlineKeyboardButton(text='💬 reply to her' if lang==EN else '💬 ответить ей',
+                buttons.append([InlineKeyboardButton(text='💬 reply to her' if lang==EN else '💬 ответить ему',
                                                      web_app=WebAppInfo(url=f'{PUBLIC_BASE_URL}/webapp?open=chat'))])
             await bot.send_photo(telegram_id,BufferedInputFile(card,filename='for_you.jpg'),
                                  caption=fos.caption('en' if lang==EN else 'ru'),
@@ -531,10 +531,10 @@ def _user_local_hour(user) -> int | None:
 _ritual_promised: set = set()
 # V3.64.8: the morning that keeps the promise says so once, in her words.
 _PROMISE_KEPT = (
-    'как обещала 😌 доброе утро',
-    'доброе утро ☀️ обещала же, держи',
-    'проснулся? это тебе, как и обещала 💋',
-    'утро ☀️ вчера обещала, сегодня показываю',
+    'как обещал 😌 доброе утро',
+    'доброе утро ☀️ обещал же, держи',
+    'проснулся? это тебе, как и обещал 💋',
+    'утро ☀️ вчера обещал, сегодня показываю',
 )
 
 
@@ -1029,7 +1029,7 @@ async def _first_minutes(bot):
                 kb = [[InlineKeyboardButton(text='✅ I am 18+ · I accept the terms' if en else '✅ Мне есть 18 · принимаю условия',
                                             callback_data='consent:accept')]]
             elif PUBLIC_BASE_URL:
-                kb = [[InlineKeyboardButton(text='💬 say hi' if en else '💬 написать ей',
+                kb = [[InlineKeyboardButton(text='💬 say hi' if en else '💬 написать ему',
                                             web_app=WebAppInfo(url=f'{PUBLIC_BASE_URL}/webapp?open=chat'))]]
             else:
                 kb = []
@@ -1090,7 +1090,7 @@ async def _trial_followup(bot):
                                                           else f'⭐ месяц — {PREMIUM_MONTHLY_STARS} Stars'),
                                                     callback_data='buy:premium')])
             if PUBLIC_BASE_URL:
-                kb.append([InlineKeyboardButton(text='💬 reply to her' if en else '💬 ответить ей',
+                kb.append([InlineKeyboardButton(text='💬 reply to her' if en else '💬 ответить ему',
                                                 web_app=WebAppInfo(url=f'{PUBLIC_BASE_URL}/webapp?open=chat'))])
             await bot.send_message(telegram_id, text, reply_markup=InlineKeyboardMarkup(inline_keyboard=kb))
             _to_app_chat(uid, telegram_id, char_id or CHARACTER_ID, text)
@@ -1131,7 +1131,7 @@ async def _paid_day1(bot):
             kb = None
             if PUBLIC_BASE_URL:
                 kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(
-                    text='💬 reply to her' if lang == 'en' else '💬 ответить ей',
+                    text='💬 reply to her' if lang == 'en' else '💬 ответить ему',
                     web_app=WebAppInfo(url=f'{PUBLIC_BASE_URL}/webapp?open=chat'))]])
             await bot.send_message(telegram_id, text, reply_markup=kb)
             _to_app_chat(uid, telegram_id, char_id, text)
@@ -1164,7 +1164,7 @@ async def _renewal_care(bot):
                                      language_code='en' if en else None, character_id=char_id) or rc.fallback(stage, lang)
             kb = rc.stay_buttons(telegram_id, en)
             if PUBLIC_BASE_URL:
-                kb.append([InlineKeyboardButton(text='💬 reply to her' if en else '💬 ответить ей',
+                kb.append([InlineKeyboardButton(text='💬 reply to her' if en else '💬 ответить ему',
                                                 web_app=WebAppInfo(url=f'{PUBLIC_BASE_URL}/webapp?open=chat'))])
             await bot.send_message(telegram_id, text, reply_markup=InlineKeyboardMarkup(inline_keyboard=kb))
             _to_app_chat(uid, telegram_id, char_id, text)

@@ -19,36 +19,36 @@ import logging
 logger = logging.getLogger(__name__)
 
 SHORT_DESCRIPTION_DEFAULT = (
-    'Pick your AI girlfriend: she texts first, remembers everything about you and is always there. 18+'
+    'Pick your AI boyfriend: he texts first, remembers everything about you and is always there. 18+'
 )
 SHORT_DESCRIPTION_RU = (
-    'Выбери свою ИИ-девушку: она пишет первой, помнит всё о тебе и всегда на связи. 18+'
+    'Выбери своего ИИ-парня: он пишет первым, помнит всё о тебе и всегда на связи. 18+'
 )
 
 DESCRIPTION_DEFAULT = (
-    'When you want to talk — she is already texting you 💬\n'
+    'When you want to talk — he is already texting you 💬\n'
     '\n'
-    '👩 Pick yours: Anna, Vika, Zlata, Emily, Sonya, Maria and more\n'
+    '👨 Pick yours: Mark, Maksim, Daniil, Timur, Leo, Min-jun\n'
     '🧠 Remembers your name, your day and what you talked about yesterday\n'
     '✍️ Texts first when you go quiet\n'
     '📸 Photos, 🎙 voice notes and 🎬 Videos — from cozy to very personal\n'
     '🎁 Dates, gifts and a relationship that grows\n'
     '\n'
-    'Just say "hi" — she will take it from there.\n'
+    'Just say "hi" — he will take it from there.\n'
     '\n'
     '18+'
 )
 
 DESCRIPTION_RU = (
-    'Когда хочется поговорить — она уже пишет тебе 💬\n'
+    'Когда хочется поговорить — он уже пишет тебе 💬\n'
     '\n'
-    '👩 Выбери свою: Анна, Вика, Злата, Emily, Соня, Mary и другие\n'
+    '👨 Выбери своего: Марк, Максим, Даниил, Тимур, Лео, Мин Джун\n'
     '🧠 Помнит твоё имя, твой день и то, о чём вы говорили вчера\n'
-    '✍️ Пишет первой, если ты пропал\n'
+    '✍️ Пишет первым, если ты пропала\n'
     '📸 Фото, 🎙 голосовые и 🎬 Видео — от уютных до очень личных\n'
     '🎁 Свидания, подарки и отношения, которые растут\n'
     '\n'
-    'Просто скажи «привет» — дальше она сама.\n'
+    'Просто скажи «привет» — дальше он сам.\n'
     '\n'
     '18+'
 )
