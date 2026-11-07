@@ -619,7 +619,7 @@ def abilities_text(lang: str = RU) -> str:
         '🏠 квартира: заходи в комнаты, проводи с ним время — новые комнаты открываются с уровнями отношений\n'
         '💕 свидания: пригласи его куда-нибудь, а после он пришлёт фото с прогулки\n'
         '🎁 подарки: приятные сюрпризы, которые сближают\n'
-        '🎙 голосовые ответы: у каждой девушки свой милый голос, отвечает на твоём языке\n'
+        '🎙 голосовые ответы: у каждого героя свой голос, отвечает на твоём языке\n'
         '🖼 коллекция открытых фотографий по уровням отношений\n'
         '💌 он иногда может написать первым и вернуться к незаконченной теме\n'
         '⏰ будильник: напиши «разбуди в 8:00» — он разбудит тебя голосом. Первый раз бесплатно, дальше будильник и напоминания — с Premium\n\n'
@@ -2055,7 +2055,7 @@ async def start(message: types.Message, command: CommandObject):
         else:
             welcome = (
                 'Что умеет этот бот?\n\n'
-                'Ролевая игра с ИИ девушками: живые чаты с памятью, фото по твоим сценариям, AI-видео и голос.\n'
+                'Ролевая игра с ИИ парнями: живые чаты с памятью, голосовые и звонки.\n'
                 'Отношения растут по уровням 1–10 — с каждым уровнем ближе и откровеннее.\n\n'
                 '🎁 после подтверждения 18+ — бесплатные фото-кредиты на первое фото.\n'
                 '⬇️ Поехали! ⬇️\n\n'
@@ -2087,7 +2087,7 @@ async def start(message: types.Message, command: CommandObject):
         )
     else:
         welcome_back = (
-            f'с возвращением, {name} 🙂 девушки, чаты, картинки и магазин — в приложении 👇'
+            f'с возвращением, {name} 🙂 парни, чаты и магазин — в приложении 👇'
         )
     # V3.42.0: no character grid here anymore — a short button list instead.
     markup = InlineKeyboardMarkup(inline_keyboard=_welcome_back_rows(lang))
@@ -2589,7 +2589,7 @@ async def admin_panel(message: types.Message):
     _admin_promo_sessions.pop(message.from_user.id, None)
     CARD_MEDIA_WAIT.pop(message.from_user.id, None)
     ensure_default_cards()
-    await message.answer('⚙️ Админка AnnaBot', reply_markup=admin_keyboard())
+    await message.answer('⚙️ Админка ИИ парень', reply_markup=admin_keyboard())
 
 
 @dp.message(Command('revoke_all_premium'))
@@ -2688,7 +2688,7 @@ async def admin_home(cq: types.CallbackQuery):
     _admin_promo_sessions.pop(cq.from_user.id, None)
     CARD_MEDIA_WAIT.pop(cq.from_user.id, None)
     await cq.answer()
-    await cq.message.answer('⚙️ Админка AnnaBot', reply_markup=admin_keyboard())
+    await cq.message.answer('⚙️ Админка ИИ парень', reply_markup=admin_keyboard())
 
 
 @dp.callback_query(F.data == 'admin:premium_toggle')
@@ -3571,7 +3571,7 @@ async def admin_prophoto_generate(cq: types.CallbackQuery):
         return
     plan = gift_pool_service.plan_gift_pool()
     if not plan:
-        await cq.answer('нет видимых героинь', show_alert=True)
+        await cq.answer('нет видимых героев', show_alert=True)
         return
     await cq.answer()
     admin_id = cq.from_user.id
@@ -4635,7 +4635,7 @@ async def referral_cmd(message: types.Message, who: types.User | None = None):
     pct = int(REFERRAL_COMMISSION_PCT) if float(REFERRAL_COMMISSION_PCT).is_integer() else REFERRAL_COMMISSION_PCT
     if lang == EN:
         text = (
-            f'💰 AnnaBot Partner program\n\n'
+            f'💰 AI Boyfriend Partner program\n\n'
             f'Invite friends and earn {pct}% of EVERY purchase they make — forever, not just once.\n\n'
             f'👥 friends invited: {stats["invited"]}\n'
             f'💵 total earned: {stats["earned_rub"]:g} ₽\n'
@@ -4648,7 +4648,7 @@ async def referral_cmd(message: types.Message, who: types.User | None = None):
         withdraw_label = f'💸 Withdraw {stats["balance_rub"]:g} ₽'
     else:
         text = (
-            f'💰 Партнёрка AnnaBot\n\n'
+            f'💰 Партнёрка «ИИ парень»\n\n'
             f'Приглашай друзей и получай {pct}% с КАЖДОЙ их покупки — навсегда, а не один раз.\n\n'
             f'👥 приведено друзей: {stats["invited"]}\n'
             f'💵 заработано всего: {stats["earned_rub"]:g} ₽\n'
@@ -4956,14 +4956,14 @@ async def app_cmd(message: types.Message):
     url = f'{PUBLIC_BASE_URL}/webapp'
     if lang == EN:
         await message.answer(
-            '🛍 AnnaBot app — characters, shop and your profile:',
+            '🛍 AI Boyfriend app — characters, shop and your profile:',
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text='🛍 Open App', web_app=types.WebAppInfo(url=url))],
             ]),
         )
         return
     await message.answer(
-        '🛍 приложение AnnaBot — персонажи, магазин и твой профиль:',
+        '🛍 приложение «ИИ парень» — персонажи, магазин и твой профиль:',
         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text='🛍 Открыть приложение', web_app=types.WebAppInfo(url=url))],
         ]),
@@ -8307,8 +8307,8 @@ async def app_button(message: types.Message):
     """V3.38.0: «📱 Открыть приложение» — the top funnel row."""
     await _send_app_entry(
         message,
-        '🛍 приложение AnnaBot — персонажи, чаты, картинки, магазин и твой профиль:',
-        '🛍 AnnaBot app — characters, chats, pictures, shop and your profile:',
+        '🛍 приложение «ИИ парень» — персонажи, чаты, магазин и твой профиль:',
+        '🛍 AI Boyfriend app — characters, chats, shop and your profile:',
     )
 
 
@@ -8338,7 +8338,7 @@ def peach_shop_keyboard(telegram_id: int, lang: str = 'ru') -> InlineKeyboardMar
             text=f'⭐ {peach_num(credits)} 🍑 — {PEACH_PACK_STARS[key]} Stars',
             callback_data=f'buy:{key}')])
     if not is_premium(telegram_id):
-        rows.append([InlineKeyboardButton(text='👑 Premium' if en else '👑 Premium — все девушки и откровенный режим',
+        rows.append([InlineKeyboardButton(text='👑 Premium' if en else '👑 Premium — все парни и откровенный режим',
                                           callback_data='premium:view')])
     if PUBLIC_BASE_URL:
         rows.append([InlineKeyboardButton(text='🛍 Open the app shop' if en else '🛍 Магазин в приложении',
@@ -10179,7 +10179,7 @@ async def admin_girlday_cb(cq: types.CallbackQuery):
     if parts[1] == 'pick' and len(parts) > 2:
         girls = await asyncio.to_thread(girl_of_day.pool)
         if parts[2] not in girls:
-            await cq.answer('этой девушки нет в ротации', show_alert=True)
+            await cq.answer('этого парня нет в ротации', show_alert=True)
             return
         await asyncio.to_thread(girl_of_day.set_today, parts[2])
         await cq.answer(f'сегодня: {girl_of_day.name_of(parts[2])}')
