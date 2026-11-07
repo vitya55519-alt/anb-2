@@ -4,15 +4,16 @@ Faces are NEW: text only, no image is sent to the model, so nobody real gets
 cloned. The look is an edit from that new face, so the same man stays in every
 shot. Runs on the owner's PC (the cloud container cannot reach SpicyAPI):
 
-    python _gen_heroes_refs.py <key-file>                 # 2 variants per hero
-    python _gen_heroes_refs.py <key-file> pick mark 2     # v2 -> canonical refs
+    python _gen_heroes_refs.py <key-file>                 # one face+look per hero -> canonical refs
+    python _gen_heroes_refs.py <key-file> mark leo        # only these heroes
+    python _gen_heroes_refs.py <key-file> variant2        # the second scene, for a redo
 
-Variants go to data/references/_heroes_variants/ so they can be reviewed; that
-folder is deleted before the stage-4 merge.
+The owner asked for one variant per hero: the result goes straight to
+data/references/<hero>/00_<hero>_canonical_face.png and 01_..._canonical_look.png.
+To redo one hero, delete his two files and run again with his name.
 """
 import json
 import pathlib
-import shutil
 import sys
 import time
 import urllib.request
@@ -26,7 +27,6 @@ KEY = m.group(1) if m else raw.strip()
 BASE = 'https://api.spicyapi.ai/api/v1'
 T2I = 'bytedance/seedream-5.0-pro/text-to-image'
 EDIT = 'bytedance/seedream-5.0-pro/edit'
-VAR = ROOT / 'data' / 'references' / '_heroes_variants'
 
 QUALITY = (' High-end smartphone photo, attractive and well groomed, smooth clear skin, sharp focus on the eyes, '
            'original fictional man with a unique face, not a celebrity, not an actor, '
@@ -140,36 +140,28 @@ def render(model: str, prompt: str, refs=None) -> bytes:
     raise RuntimeError('timeout')
 
 
-def make_variants() -> None:
-    VAR.mkdir(parents=True, exist_ok=True)
+def make(only: set[str], idx: int) -> None:
     for name, h in HEROES.items():
-        for i, (face_scene, look_scene) in enumerate(h['shots'], 1):
-            face = VAR / f'{name}_v{i}_face.png'
-            look = VAR / f'{name}_v{i}_look.png'
-            try:
-                if not face.exists():  # text only: nobody real gets cloned
-                    face.write_bytes(render(T2I, f"{face_scene}. A {h['face']}." + SOFT + QUALITY))
-                    print('ok', face.name, flush=True)
-                if not look.exists():
-                    uri = upload(face.read_bytes(), 'image/png')
-                    look.write_bytes(render(EDIT, KEEP.format(body=h['body']) + look_scene + '.' + SOFT + QUALITY,
-                                            [uri]))
-                    print('ok', look.name, flush=True)
-            except Exception as e:  # keep going with the other heroes
-                print('error', name, i, e, flush=True)
-
-
-def pick(name: str, n: int) -> None:
-    out = ROOT / 'data' / 'references' / name
-    out.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(VAR / f'{name}_v{n}_face.png', out / f'00_{name}_canonical_face.png')
-    shutil.copyfile(VAR / f'{name}_v{n}_look.png', out / f'01_{name}_canonical_look.png')
-    print('picked', name, n)
+        if only and name not in only:
+            continue
+        face_scene, look_scene = h['shots'][idx]
+        out = ROOT / 'data' / 'references' / name
+        out.mkdir(parents=True, exist_ok=True)
+        face = out / f'00_{name}_canonical_face.png'
+        look = out / f'01_{name}_canonical_look.png'
+        try:
+            if not face.exists():  # text only: nobody real gets cloned
+                face.write_bytes(render(T2I, f"{face_scene}. A {h['face']}." + SOFT + QUALITY))
+                print('ok', face.name, flush=True)
+            if not look.exists():
+                uri = upload(face.read_bytes(), 'image/png')
+                look.write_bytes(render(EDIT, KEEP.format(body=h['body']) + look_scene + '.' + SOFT + QUALITY, [uri]))
+                print('ok', look.name, flush=True)
+        except Exception as e:  # keep going with the other heroes
+            print('error', name, e, flush=True)
 
 
 if __name__ == '__main__':
     args = sys.argv[2:]
-    if args[:1] == ['pick']:
-        pick(args[1], int(args[2]))
-    else:
-        make_variants()
+    idx = 1 if 'variant2' in args else 0
+    make({a for a in args if a in HEROES}, idx)
