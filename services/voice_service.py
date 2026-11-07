@@ -1,0 +1,633 @@
+"""Voice service: TTS (text-to-speech) and STT (speech-to-text).
+
+Provider priority:
+  TTS: Grok TTS via SpicyAPI (V3.74.0, the owner's pick)
+       → Gemini 2.5 TTS (natural human-like voices, V3.20.1)
+       → edge-tts (free, no API key) → OpenAI TTS (if key present)
+  STT: faster-whisper (local, free, singleton model since V3.57.1)
+       → Gemini flash audio (V3.57.1) → OpenAI Whisper (if key present)
+"""
+import asyncio
+import base64
+import io
+import logging
+import os
+import tempfile
+import zlib
+from pathlib import Path
+
+from services.custom_character_service import is_custom_character
+from config import (
+    TTS_API_KEY, TTS_MODEL, TTS_VOICE, AI_BASE_URL, OPENAI_VOICE_AVAILABLE,
+    GEMINI_API_KEY, GEMINI_TTS_ENABLED, GEMINI_TTS_MODEL, GEMINI_VIDEO_BASE_URL, GEMINI_CHAT_MODEL,
+    SPICYAPI_KEY, SPICY_TTS_ENABLED, SPICYAPI_TTS_MODEL, SPICYAPI_TTS_COST_PER_1K_USD,
+    SPICY_GEMINI_TTS_ENABLED, SPICY_GEMINI_TTS_MODEL, SPICY_GEMINI_TTS_COST_PER_SEC_USD,
+)
+
+logger = logging.getLogger(__name__)
+
+# ── edge-tts voices mapping (OpenAI voice → closest edge-tts equivalent) ──
+_EDGE_VOICE_MAP = {
+    'alloy': 'en-US-AriaNeural',
+    'echo': 'en-US-GuyNeural',
+    'fable': 'en-GB-RyanNeural',
+    'nova': 'en-US-JennyNeural',
+    'onyx': 'en-US-ChristopherNeural',
+    'shimmer': 'en-US-AriaNeural',
+}
+
+# Public constant used by main.py for /voice_style command validation.
+VALID_VOICES = tuple(_EDGE_VOICE_MAP.keys())
+
+# ── per-character cute female voices, one profile per language ─────────────
+# Each girl has her own voice; the language is picked from the text itself
+# (user writes Russian → Russian voice, English → English voice).
+CHARACTER_VOICE_PROFILES = {
+    'anna_01': {
+        'ru': ('ru-RU-SvetlanaNeural', {'rate': '+3%', 'pitch': '+2Hz'}),
+        'en': ('en-US-AriaNeural', {'rate': '+2%', 'pitch': '+2Hz'}),
+    },
+    'alena_01': {
+        'ru': ('ru-RU-DariyaNeural', {'rate': '+4%', 'pitch': '+3Hz'}),
+        'en': ('en-US-JennyNeural', {'rate': '+3%', 'pitch': '+2Hz'}),
+    },
+    'maria_01': {
+        'ru': ('ru-RU-SvetlanaNeural', {'rate': '+1%', 'pitch': '+7Hz'}),
+        'en': ('en-US-MichelleNeural', {'rate': '+1%', 'pitch': '+4Hz'}),
+    },
+}
+# V3.31.8: constructor personas get their own voice profile. Before this,
+# a custom character fell back to _DEFAULT_VOICE_PROFILE — Anna's exact
+# voice — so her date/gift voice notes literally sounded like Anna.
+CUSTOM_CHARACTER_VOICE_PROFILE = {
+    'ru': ('ru-RU-DariyaNeural', {'rate': '+6%', 'pitch': '+0Hz'}),
+    'en': ('en-US-JennyNeural', {'rate': '+6%', 'pitch': '+0Hz'}),
+}
+# V3.63.8: 'Erin' is not a Gemini prebuilt voice (Erinome is) — every custom
+# girl's TTS 400'd and fell back to the robotic edge voice. Custom girls now
+# draw a stable voice from the female pool by their id.
+CUSTOM_CHARACTER_GEMINI_TTS_VOICE = ''
+_DEFAULT_VOICE_PROFILE = CHARACTER_VOICE_PROFILES['anna_01']
+
+# ── Gemini 2.5 TTS prebuilt voices (V3.20.1): one cute female voice per girl ─
+# V3.63.8: only three girls were mapped, so the other 14 all spoke as Anna
+# (Leda). Every girl now has her own voice and her own manner of speaking.
+GEMINI_TTS_VOICES = {
+    'anna_01': 'Leda',
+    'alena_01': 'Kore',
+    'maria_01': 'Aoede',
+    'alisa_01': 'Autonoe',  # V3.63.10: Vindemiatrix sounded rough and old («как у сорокалетней»)
+    'darina_01': 'Achernar',
+    'erika_01': 'Aoede',  # V3.63.11: Gacrux sounded «стрёмно»
+    'eva_01': 'Autonoe',
+    'kate_01': 'Erinome',
+    'kristina_01': 'Despina',
+    'mila_01': 'Callirrhoe',
+    'rex_01': 'Pulcherrima',
+    'romina_01': 'Callirrhoe',
+    'sasha_01': 'Zephyr',
+    'sonya_01': 'Laomedeia',
+    'veronika_01': 'Sulafat',
+    'vika_01': 'Kore',
+    'violetta_01': 'Despina',
+    'zlata_01': 'Zephyr',
+    'lera_01': 'Laomedeia',
+    'diana_01': 'Kore',
+    'nika_01': 'Sulafat',
+    'ksyusha_01': 'Zephyr',
+    'margo_01': 'Pulcherrima',
+    'alya_01': 'Callirrhoe',
+    'yuki_01': 'Laomedeia',
+    'miko_01': 'Erinome',
+    'rin_01': 'Despina',
+    'hana_01': 'Sulafat',
+    'vlada_01': 'Erinome',
+    'milana_01': 'Pulcherrima',
+    'polina_01': 'Laomedeia',
+    'dasha_01': 'Sulafat',
+    'kamila_01': 'Callirrhoe',
+    'rita_01': 'Zephyr',
+    'yulya_01': 'Leda',
+    'liza_01': 'Aoede',
+    'kira_01': 'Despina',
+    'agata_01': 'Achernar',
+    'jina_01': 'Autonoe',
+    'lana_01': 'Sulafat',
+}
+GEMINI_FEMALE_VOICES = (
+    'Leda', 'Kore', 'Aoede', 'Achernar', 'Autonoe',
+    'Erinome', 'Despina', 'Callirrhoe', 'Pulcherrima', 'Zephyr', 'Laomedeia', 'Sulafat',
+)
+_CUSTOM_VOICE_POOL = GEMINI_FEMALE_VOICES
+# How she talks — added to the style direction so girls sharing a voice still
+# sound like different women.
+GEMINI_TTS_MANNER = {
+    'anna_01': 'playful and sociable, ',
+    'alena_01': 'bright, confident and teasing, ',
+    'maria_01': 'very gentle, caring and a little breathy, ',
+    'alisa_01': 'young and light-voiced, quiet, thoughtful and a bit shy, ',
+    'darina_01': 'soft, homely and caring, ',
+    'erika_01': 'elegant, warm and self-assured, with a soft smile, ',
+    'eva_01': 'cheerful, simple and energetic, ',
+    'kate_01': 'direct, sporty and sensual, ',
+    'kristina_01': 'lazy, low and sultry, like late at night, ',
+    'mila_01': 'cosy and warm with a little mischief, ',
+    'rex_01': 'commanding, slow and mysterious, ',
+    'romina_01': 'sensual, relaxed and playful, ',
+    'sasha_01': 'bright, modern and flirty, ',
+    'sonya_01': 'lively, giggly and spontaneous, ',
+    'veronika_01': 'mature, deep and caring, ',
+    'vika_01': 'charismatic, firm and demanding, ',
+    'violetta_01': 'glamorous, smooth and a little ironic, ',
+    'zlata_01': 'cheeky, energetic and impressionable, ',
+    'lera_01': 'soft, warm and a little shy, a little breathless, ',
+    'diana_01': 'sharp, mocking and confident, ',
+    'nika_01': 'calm, low and confident, a little teasing, ',
+    'ksyusha_01': 'bright, flirty and purring, ',
+    'margo_01': 'warm, smooth and self-assured, ',
+    'alya_01': 'lively, expressive and a little grumpy, ',
+    'yuki_01': 'sweet, playful and teasing, ',
+    'miko_01': 'bright, confident and playful, ',
+    'rin_01': 'calm, low and a little sultry, ',
+    'hana_01': 'calm, warm and a little husky, like a doctor who enjoys teasing, ',
+    'vlada_01': 'bright, cheeky and teasing, with a smirk in the voice, ',
+    'milana_01': 'cool, smooth and elegant, a little haughty, ',
+    'polina_01': 'sleepy, soft and tender, with a lazy smile, ',
+    'dasha_01': 'quiet, low and ironic, unhurried, ',
+    'kamila_01': 'hot, fast and bold, with a warm southern energy, ',
+    'rita_01': 'bright, giggly and playful, ',
+    'yulya_01': 'sweet, playful and purring, with a giggle, ',
+    'liza_01': 'soft, breathy and shy, with a sly smile, ',
+    'kira_01': 'low, smoky and confident, with a teasing smirk, ',
+    'agata_01': 'soft, breathy and tender, a slow intimate whisper, ',
+    'jina_01': 'bright, bubbly and teasing, with a playful laugh in her voice, ',
+    'lana_01': 'low, velvety and confident, with a slow knowing smile, ',
+}
+_DEFAULT_GEMINI_TTS_VOICE = GEMINI_TTS_VOICES['anna_01']
+
+# V3.74.0: Grok has two multilingual female voices; the owner liked both.
+# eve — lighter and playful; ara — calmer and lower, for the mature girls.
+GROK_ARA_CHARACTERS = frozenset({
+    'maria_01', 'darina_01', 'erika_01', 'kristina_01', 'rex_01', 'veronika_01', 'violetta_01', 'nika_01', 'margo_01', 'rin_01', 'milana_01',
+})
+
+
+def grok_voice_for(character_id: str | None) -> str:
+    return 'ara' if (character_id or '') in GROK_ARA_CHARACTERS else 'eve'
+
+# V3.25.0: Google rotates TTS model names (2.5 preview was superseded by the
+# 3.1 preview).  Walk the chain on 404/400 so the human-like voice survives
+# model shutdowns; an explicit GEMINI_TTS_MODEL env override is tried first.
+_TTS_MODEL_CHAIN = tuple(dict.fromkeys(
+    [GEMINI_TTS_MODEL, 'gemini-3.1-flash-tts-preview', 'gemini-2.5-flash-preview-tts']
+))
+_tts_good_model: str | None = None
+
+
+def detect_voice_language(text: str) -> str:
+    """Reply voice follows the user's language: Cyrillic text → ru, else en."""
+    return 'ru' if any('\u0400' <= ch <= '\u04FF' for ch in text) else 'en'
+
+
+def pick_edge_voice(text: str, character_id: str | None = None) -> tuple[str, dict]:
+    """Return (edge_voice, edge_kwargs) for a character and the text language."""
+    profile = CHARACTER_VOICE_PROFILES.get(character_id or '')
+    if profile is None and is_custom_character(character_id):
+        profile = CUSTOM_CHARACTER_VOICE_PROFILE
+    profile = profile or _DEFAULT_VOICE_PROFILE
+    return profile[detect_voice_language(text)]
+
+# ── OpenAI client (optional, only if key is present) ──────────────────────
+_openai_client = None
+if OPENAI_VOICE_AVAILABLE:
+    try:
+        from openai import AsyncOpenAI
+        _openai_client = AsyncOpenAI(api_key=TTS_API_KEY, base_url=AI_BASE_URL)
+    except Exception:
+        _openai_client = None
+
+
+async def transcribe(voice_bytes: io.BytesIO) -> str:
+    """Transcribe voice message (ogg/opus) to text."""
+    # Try faster-whisper first (local, free, no API)
+    last_error: Exception | None = None
+    try:
+        return await _transcribe_faster_whisper(voice_bytes)
+    except ImportError:
+        pass
+    except Exception as exc:
+        last_error = exc
+        logger.warning('faster-whisper failed: %s; falling back', exc)
+
+    # V3.57.1: Gemini flash listens to audio too — the key is already live for
+    # TTS/photos, so it rescues the whisper cold-start/model-download failures.
+    if GEMINI_API_KEY:
+        try:
+            return await _transcribe_gemini(voice_bytes)
+        except Exception as exc:
+            last_error = exc
+            logger.warning('gemini stt failed: %s; falling back to OpenAI', exc)
+
+    # Fallback to OpenAI Whisper (requires API key)
+    if _openai_client:
+        return await _transcribe_openai(voice_bytes)
+
+    raise last_error or RuntimeError('No STT provider available. Install faster-whisper: pip install faster-whisper')
+
+
+# V3.57.1: the Whisper model is heavy (~75 MB) and loading it cost seconds on
+# EVERY transcription — the first voice message after a deploy timed out. Keep
+# one warm instance for the lifetime of the process.
+_whisper_model = None
+
+
+def _get_whisper_model():
+    global _whisper_model
+    if _whisper_model is None:
+        from faster_whisper import WhisperModel
+        _whisper_model = WhisperModel('base', device='cpu', compute_type='int8')
+    return _whisper_model
+
+
+async def _transcribe_faster_whisper(voice_bytes: io.BytesIO) -> str:
+    """Use faster-whisper for local speech-to-text."""
+    import asyncio
+
+    voice_bytes.seek(0)
+    audio_data = voice_bytes.read()
+
+    # Write to temp file (faster-whisper needs a file path)
+    with tempfile.NamedTemporaryFile(suffix='.ogg', delete=False) as tmp:
+        tmp.write(audio_data)
+        tmp_path = tmp.name
+
+    try:
+        loop = asyncio.get_event_loop()
+        model = await loop.run_in_executor(None, _get_whisper_model)
+        segments, _ = await loop.run_in_executor(None, model.transcribe, tmp_path)
+        text = ' '.join(seg.text for seg in segments).strip()
+        return text
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
+
+
+# V3.63.3: gemini-2.5-flash / 2.0-flash now answer 404 (retired) — users'
+# voice notes fell through to a missing OpenAI key (502). The live chat model
+# goes first.
+_STT_MODEL_CHAIN = tuple(dict.fromkeys((GEMINI_CHAT_MODEL, 'gemini-flash-latest', 'gemini-2.5-flash')))
+_stt_good_model: str | None = None
+
+
+async def _transcribe_gemini(voice_bytes: io.BytesIO) -> str:
+    """V3.57.1: multimodal Gemini transcription of the ogg/opus note."""
+    import httpx
+
+    global _stt_good_model
+    voice_bytes.seek(0)
+    audio_b64 = base64.b64encode(voice_bytes.read()).decode('ascii')
+    payload = {'contents': [{'parts': [
+        {'text': 'Transcribe this voice message exactly, preserving the spoken '
+                 'language. Output only the transcript text, nothing else.'},
+        {'inline_data': {'mime_type': 'audio/ogg', 'data': audio_b64}},
+    ]}], 'generationConfig': {'temperature': 0.0}}
+    headers = {'x-goog-api-key': GEMINI_API_KEY, 'Content-Type': 'application/json'}
+    models = ((_stt_good_model,) + _STT_MODEL_CHAIN) if _stt_good_model else _STT_MODEL_CHAIN
+    last_error: Exception | None = None
+    for model in models:
+        url = f'{GEMINI_VIDEO_BASE_URL}/models/{model}:generateContent'
+        try:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=20.0)) as client:
+                r = await client.post(url, headers=headers, json=payload)
+            if r.status_code >= 400:
+                logger.warning('gemini stt model=%s status=%s', model, r.status_code)
+                last_error = RuntimeError(f'gemini_stt_http_{r.status_code}')
+                continue
+            data = r.json()
+        except Exception as exc:
+            last_error = exc
+            continue
+        text = ''.join(
+            (part.get('text') or '')
+            for part in ((data.get('candidates') or [{}])[0].get('content') or {}).get('parts') or []
+        ).strip()
+        if not text:
+            last_error = RuntimeError('gemini_stt_empty')
+            continue
+        _stt_good_model = model
+        return text
+    raise last_error or RuntimeError('gemini_stt_no_model')
+
+
+async def _transcribe_openai(voice_bytes: io.BytesIO) -> str:
+    """Use OpenAI Whisper API."""
+    voice_bytes.seek(0)
+    r = await _openai_client.audio.transcriptions.create(
+        model='whisper-1',
+        file=('voice.ogg', voice_bytes, 'audio/ogg'),
+    )
+    return r.text
+
+
+async def synthesize_bytes(text: str, voice: str | None = None, character_id: str | None = None,
+                           mood: str | None = None) -> bytes:
+    """Synthesize text to speech audio bytes (opus format).
+
+    The voice follows the character (each girl has her own cute voice) and the
+    language of the text itself. An explicit legacy `voice` style still wins.
+    """
+    v = voice if voice in _EDGE_VOICE_MAP else TTS_VOICE
+
+    # V3.106.0: a spoken line — laughs, sighs, pauses as Grok speech tags; the
+    # fallbacks below get the same line without the tags.
+    from services import voice_humanize
+    spoken = voice_humanize.to_speech(text, character_id)
+    plain = voice_humanize.strip_tags(spoken) if voice_humanize.ENABLED else text
+    if not plain.strip():
+        plain = text
+
+    # V3.106.0: Gemini 3.8 Flash TTS (SpicyAPI) first — «гемини огонь».
+    if SPICY_GEMINI_TTS_ENABLED and SPICYAPI_KEY:
+        try:
+            return await _tts_spicy_gemini(spoken or text, character_id, mood=mood)
+        except Exception as exc:
+            logger.warning('gemini-3.8-tts failed: %s; falling back to grok', exc)
+
+    # V3.74.0: Grok TTS (SpicyAPI) — the owner liked eve/ara best.
+    if SPICY_TTS_ENABLED and SPICYAPI_KEY:
+        try:
+            return await _tts_grok(spoken or text, character_id)
+        except Exception as exc:
+            logger.warning('grok-tts failed: %s; falling back to gemini', exc)
+    text = plain
+
+    # V3.20.1: Gemini TTS first — a natural, human-like cute voice (the same
+    # audio family heard in Veo videos); edge-tts sounded robotic to the owner.
+    if GEMINI_TTS_ENABLED:
+        try:
+            return await _tts_gemini(text, character_id)
+        except Exception as exc:
+            logger.warning('gemini-tts failed: %s; falling back to edge-tts', exc)
+
+    # Try edge-tts (free, no API key needed)
+    try:
+        audio = await _tts_edge_tts(text, v, character_id)
+        logger.info('tts ok provider=edge (robotic fallback)')
+        return audio
+    except ImportError:
+        pass
+    except Exception as exc:
+        logger.warning('edge-tts failed: %s; falling back to OpenAI', exc)
+
+    # Fallback to OpenAI TTS
+    if _openai_client:
+        return await _tts_openai(text, v)
+
+    raise RuntimeError('No TTS provider available. Install edge-tts: pip install edge-tts')
+
+
+_SPICY_GEMINI_BASE = {
+    'ru': ('Молодая девушка записывает голосовое сообщение близкому мужчине. Живая разговорная '
+           'русская речь, близко к микрофону, с улыбкой, в естественном темпе; не диктор и не робот. '),
+    'en': ('A young woman recording a quick voice message to a man she is close to: lively, natural, '
+           'close to the microphone, with a smile, never like an announcer or a robot. '),
+}
+
+
+# V3.108.0: a delivery mood on top of her own manner — the evening voice note
+# (owner: «мягкое, человеческое, сексуальное»).
+_SPICY_GEMINI_MOOD = {
+    'evening': {
+        'ru': ('Поздний вечер, она уже лежит в постели и записывает ему голосовое перед сном: говорит '
+               'тихо, мягко и медленно, близко-близко к микрофону, с тёплой лёгкой хрипотцой и '
+               'придыханием, чуть игриво и соблазнительно, с паузами и улыбкой в голосе. '),
+        'en': ('Late evening, she is already in bed recording him a voice note before sleep: quiet, soft '
+               'and slow, very close to the microphone, warm and a little husky, breathy, playful and '
+               'seductive, with small pauses and a smile in her voice. '),
+    },
+}
+
+
+async def _tts_spicy_gemini(spoken: str, character_id: str | None = None, mood: str | None = None) -> bytes:
+    """V3.106.0: Gemini 3.8 Flash TTS through SpicyAPI (WAV 24 kHz → opus).
+    Her own Gemini voice and manner; Grok tags become <laugh>/<sigh>/<short pause>."""
+    from services import spend_service, spicy_jobs, voice_humanize
+    text, style = voice_humanize.for_gemini(spoken)
+    lang = 'ru' if detect_voice_language(text).startswith('ru') else 'en'
+    manner = GEMINI_TTS_MANNER.get(character_id or '', '').strip(' ,')
+    instructions = (_SPICY_GEMINI_BASE[lang] + _SPICY_GEMINI_MOOD.get(mood or '', {}).get(lang, '')
+                    + (f'Her manner: {manner}.' if manner else ''))
+    block = {'text': text[:3000], 'voice_id': gemini_voice_for(character_id),
+             'instructions': instructions[:1000]}
+    if style:
+        block['style'] = style
+    ok, cost = False, 0.0
+    try:
+        wav, _, cost = await spicy_jobs.run(SPICY_GEMINI_TTS_MODEL, block, timeout=60, first_wait=2.0)
+        ok = True
+    finally:
+        est = cost or SPICY_GEMINI_TTS_COST_PER_SEC_USD * max(2.0, len(block['text']) / 14)
+        spend_service.record_image_spend('spicyapi_tts', 'voice', est, billed=ok, success=ok)
+    logger.info('tts ok provider=gemini38 voice=%s style=%s chars=%s', block['voice_id'], style or '-',
+                len(block['text']))
+    try:
+        return await _convert_wav_to_opus(wav, tempo=1.0)
+    except Exception:
+        return wav
+
+
+async def _tts_grok(text: str, character_id: str | None = None) -> bytes:
+    """V3.74.0: Grok TTS through SpicyAPI → opus for the voice bubble (mp3 if
+    ffmpeg is missing; Telegram and the app both play it)."""
+    from services import spend_service, spicy_jobs
+    voice = grok_voice_for(character_id)
+    block = {'text': text[:3000], 'voice_id': voice, 'language': detect_voice_language(text)}
+    ok = False
+    try:
+        mp3, _, _ = await spicy_jobs.run(SPICYAPI_TTS_MODEL, block, timeout=60, first_wait=1.5)
+        ok = True
+    finally:
+        spend_service.record_image_spend('spicyapi_tts', 'voice',
+                                         SPICYAPI_TTS_COST_PER_1K_USD * len(block['text']) / 1000,
+                                         billed=ok, success=ok)
+    logger.info('tts ok provider=grok voice=%s chars=%s', voice, len(block['text']))
+    try:
+        return await _convert_mp3_to_opus(mp3)
+    except Exception:
+        return mp3
+
+
+async def _tts_edge_tts(text: str, voice: str, character_id: str | None = None) -> bytes:
+    """Use edge-tts (free Microsoft TTS) to synthesize speech.
+
+    A known character uses that girl's own voice in the text's language;
+    an explicit /voice_style choice keeps the legacy single-voice behavior.
+    """
+    import edge_tts
+
+    if voice in _EDGE_VOICE_MAP and voice != TTS_VOICE:
+        communicate = edge_tts.Communicate(text, _EDGE_VOICE_MAP[voice])
+    else:
+        edge_voice, edge_kwargs = pick_edge_voice(text, character_id)
+        communicate = edge_tts.Communicate(text, edge_voice, **edge_kwargs)
+
+    buf = io.BytesIO()
+    async for chunk in communicate.stream():
+        if chunk['type'] == 'audio':
+            buf.write(chunk['data'])
+
+    audio_bytes = buf.getvalue()
+    if not audio_bytes:
+        raise RuntimeError('edge-tts produced empty audio')
+
+    # edge-tts outputs mp3; convert to opus for Telegram voice messages
+    try:
+        return await _convert_mp3_to_opus(audio_bytes)
+    except Exception:
+        # If conversion fails, return mp3 (Telegram can play it)
+        return audio_bytes
+
+
+async def _convert_mp3_to_opus(mp3_bytes: bytes) -> bytes:
+    """Convert mp3 bytes to opus using pydub + ffmpeg."""
+    import asyncio
+
+    def _convert():
+        from pydub import AudioSegment
+        audio = AudioSegment.from_mp3(io.BytesIO(mp3_bytes))
+        out = io.BytesIO()
+        audio.export(out, format='opus', codec='libopus', bitrate='64k')
+        return out.getvalue()
+
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, _convert)
+
+
+async def _tts_openai(text: str, voice: str) -> bytes:
+    """Use OpenAI TTS API."""
+    v = voice if voice in ('alloy', 'echo', 'fable', 'nova', 'onyx', 'shimmer') else TTS_VOICE
+    r = await _openai_client.audio.speech.create(
+        model=TTS_MODEL, voice=v, input=text, response_format='opus',
+    )
+    return r.content
+
+
+# V3.63.3: Gemini TTS reads plain text in a flat announcer tone («как с
+# калькулятором»). A spoken-style direction in front of the line makes it
+# sound like a real girl's voice message; the direction itself is not read.
+_TTS_STYLE = (
+    'Say this as a real young woman recording a quick voice message to the man she loves: '
+    'warm and affectionate, close to the microphone, with a smile, at a lively natural '
+    'conversational pace, a little quick, like chatting with someone close; never drag '
+    'words out, no long pauses, never like an announcer or a robot: '
+)
+# V3.63.9: Gemini voices still came out slow and drawn-out («тянутся»), so the
+# opus encode also speeds them up a touch (pitch is kept by atempo).
+try:
+    TTS_TEMPO = min(1.5, max(0.8, float(os.getenv('TTS_TEMPO', '1.12'))))
+except ValueError:
+    TTS_TEMPO = 1.12
+
+
+def gemini_voice_for(character_id: str | None) -> str:
+    """Her own Gemini voice; custom girls get a stable pick from the pool."""
+    voice_name = GEMINI_TTS_VOICES.get(character_id or '')
+    if voice_name is None and is_custom_character(character_id):
+        voice_name = CUSTOM_CHARACTER_GEMINI_TTS_VOICE or _CUSTOM_VOICE_POOL[
+            zlib.crc32(character_id.encode('utf-8')) % len(_CUSTOM_VOICE_POOL)]
+    return voice_name or _DEFAULT_GEMINI_TTS_VOICE
+
+
+async def _tts_gemini(text: str, character_id: str | None = None) -> bytes:
+    """V3.20.1: Gemini Flash TTS over REST — natural cute female voices.
+
+    V3.25.0: model chain with a remembered working model; one backoff retry
+    on 429/503 per model.  Returns opus when ffmpeg is available, else a WAV
+    container (Telegram still plays it as a voice file).
+    """
+    global _tts_good_model
+    voice_name = gemini_voice_for(character_id)
+    manner = GEMINI_TTS_MANNER.get(character_id or '', '')
+    models = ([_tts_good_model] if _tts_good_model in _TTS_MODEL_CHAIN else []) + [
+        m for m in _TTS_MODEL_CHAIN if m != _tts_good_model
+    ]
+    last_error: Exception = RuntimeError('gemini_tts_no_model')
+    for model in models:
+        for attempt in range(2):
+            try:
+                audio = await _tts_gemini_model(text, voice_name, model, manner)
+            except RuntimeError as exc:
+                last_error = exc
+                status = str(exc).removeprefix('gemini_tts_http_')
+                if status in {'429', '503'} and attempt == 0:
+                    await asyncio.sleep(2.0)
+                    continue
+                break  # 404/400/etc: this model is dead for us, try the next
+            except Exception as exc:
+                last_error = exc
+                break
+            _tts_good_model = model
+            logger.info('tts ok provider=gemini model=%s voice=%s', model, voice_name)
+            return audio
+    raise last_error
+
+
+async def _tts_gemini_model(text: str, voice_name: str, model: str, manner: str = '') -> bytes:
+    import httpx
+
+    payload = {
+        'contents': [{'parts': [{'text': _TTS_STYLE + manner + text}]}],
+        'generationConfig': {
+            'responseModalities': ['AUDIO'],
+            'speechConfig': {
+                'voiceConfig': {'prebuiltVoiceConfig': {'voiceName': voice_name}},
+            },
+        },
+    }
+    headers = {'x-goog-api-key': GEMINI_API_KEY, 'Content-Type': 'application/json'}
+    url = f'{GEMINI_VIDEO_BASE_URL}/models/{model}:generateContent'
+    timeout = httpx.Timeout(60.0, connect=20.0, read=60.0, write=60.0)
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        r = await client.post(url, headers=headers, json=payload)
+        if r.status_code >= 400:
+            logger.warning('Gemini TTS failed model=%s status=%s body=%s', model, r.status_code, r.text[:400])
+            raise RuntimeError(f'gemini_tts_http_{r.status_code}')
+        data = r.json()
+    pcm_b64 = None
+    for part in ((data.get('candidates') or [{}])[0].get('content') or {}).get('parts') or []:
+        inline = part.get('inlineData') or part.get('inline_data') or {}
+        if inline.get('data'):
+            pcm_b64 = inline['data']
+            break
+    if not pcm_b64:
+        raise RuntimeError('gemini_tts_empty_audio')
+    wav = _pcm16_to_wav(base64.b64decode(pcm_b64), rate=24000)
+    try:
+        return await _convert_wav_to_opus(wav)
+    except Exception:
+        return wav
+
+
+def _pcm16_to_wav(pcm: bytes, rate: int = 24000) -> bytes:
+    """Wrap raw 16-bit mono PCM (Gemini TTS output) into a WAV container."""
+    import struct
+    header = b'RIFF' + struct.pack('<I', 36 + len(pcm)) + b'WAVE'
+    header += b'fmt ' + struct.pack('<IHHIIHH', 16, 1, 1, rate, rate * 2, 2, 16)
+    header += b'data' + struct.pack('<I', len(pcm))
+    return header + pcm
+
+
+async def _convert_wav_to_opus(wav_bytes: bytes, tempo: float | None = None) -> bytes:
+    """Convert wav bytes to opus using pydub + ffmpeg (for voice bubbles)."""
+    import asyncio
+
+    def _convert():
+        from pydub import AudioSegment
+        audio = AudioSegment.from_wav(io.BytesIO(wav_bytes))
+        out = io.BytesIO()
+        t = TTS_TEMPO if tempo is None else tempo
+        extra = ['-filter:a', f'atempo={t:.2f}'] if abs(t - 1.0) > 0.01 else None
+        audio.export(out, format='opus', codec='libopus', bitrate='64k', parameters=extra)
+        return out.getvalue()
+
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, _convert)

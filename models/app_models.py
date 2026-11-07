@@ -1,0 +1,726 @@
+from datetime import datetime, timezone, date
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, Float, Integer, LargeBinary, String, Text, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column
+from .waifu_models import Base
+
+def utcnow():
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+class User(Base):
+    __tablename__ = "users"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    telegram_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # V3.31.0: last seen @username so the owner can grant premium/tokens
+    # manually by username (alternative off-bot payment flow). Auto-migrated.
+    username: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    # V3.47.0: acquisition source captured from a ?start=src_<tag> deep link on
+    # the user's first-ever /start (empty = organic). 'share:<uid>' when they
+    # arrived from a friend's shared photo. Auto-migrated by services/db.py.
+    source_tag: Mapped[str] = mapped_column(String(48), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    last_active_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+    memory_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    timezone: Mapped[str] = mapped_column(String(64), default="UTC")
+    voice_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    voice_style: Mapped[str] = mapped_column(String(32), default="nova")
+    voice_anon_mode: Mapped[bool] = mapped_column(Boolean, default=False)
+    proactive_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    appearance_description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    photo_credits: Mapped[int] = mapped_column(Integer, default=0)
+    attention_points: Mapped[int] = mapped_column(Integer, default=0)
+    streak_count: Mapped[int] = mapped_column(Integer, default=0)
+    streak_last_date: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    video_free_date: Mapped[str] = mapped_column(String(10), default="")
+    video_free_used: Mapped[int] = mapped_column(Integer, default=0)
+    # V3.20.0: the moment the one-time 24h premium discount window was opened
+    # (nullable = never offered). Auto-migrated by services/db.py.
+    discount_offered_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # V3.44.16: when the day-1 "bonus wheel is waiting" hook was sent
+    # (nullable = never). Auto-migrated by services/db.py.
+    day1_hook_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    adult_confirmed: Mapped[bool] = mapped_column(Boolean, default=False)
+    # V3.21.0: couple-layer UI pack (pet name, daily quest, rituals toggle,
+    # celebrated anniversaries, onboarding tour). Auto-migrated by services/db.py.
+    pet_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    quest_claimed_date: Mapped[str] = mapped_column(String(10), default="")
+    tour_done: Mapped[bool] = mapped_column(Boolean, default=False)
+    notify_rituals: Mapped[bool] = mapped_column(Boolean, default=True)
+    anniversaries: Mapped[str] = mapped_column(String(64), default="")
+    # V3.49.0: daily-task retention loop. ``quests_completed`` is the lifetime
+    # count of claimed daily tasks — the currency that unlocks story quests on
+    # the 5/10/15... ladder. ``quest_claims`` is a small JSON map
+    # {"YYYY-MM-DD": ["key", ...]} of which of today's 2-3 tasks are already
+    # done (the legacy single ``quest_claimed_date`` stays for old clients).
+    # ``bonus_media_date`` throttles the ~20% spontaneous free-photo drop to
+    # at most one per day. All auto-migrated by services/db.py.
+    quests_completed: Mapped[int] = mapped_column(Integer, default=0)
+    # V3.55.8: the 5-day claims map outgrew varchar(64) in Postgres
+    # (StringDataRightTruncation killed every later quest claim of the day) —
+    # the JSON needs Text. Type widened by services/db.py.
+    quest_claims: Mapped[str] = mapped_column(Text, default="")
+    bonus_media_date: Mapped[str] = mapped_column(String(10), default="")
+    # V3.22.0: the chosen character survives restarts/redeploys. Empty = Anna.
+    selected_character: Mapped[str] = mapped_column(String(64), default="")
+    # V3.22.0: interface language ('ru'/'en'); empty = Russian (legacy).
+    ui_lang: Mapped[str] = mapped_column(String(8), default="")
+    # V3.27.0: ruble-shop balances — tokens for video animation (1 token =
+    # TOKEN_PRICE_RUB) and one-time constructor credits bought via FreeKassa.
+    token_balance: Mapped[int] = mapped_column(Integer, default=0)
+    constructor_credit: Mapped[int] = mapped_column(Integer, default=0)
+    # V3.31.3: last weekly "support the project" donation ping (nullable =
+    # never pinged). Auto-migrated by services/db.py.
+    last_donation_ping_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # V3.37.0: the premium-gated "пошлый режим" chat toggle. Auto-migrated.
+    # Stays True when Premium lapses — the chat gate re-checks is_premium per
+    # message, so the flag simply waits for the next subscription.
+    spicy_mode: Mapped[bool] = mapped_column(Boolean, default=False)
+    # V3.45.0: фото «наедине» и «косплей» — лимиты и Hot Pass. Auto-migrated.
+    private_photo_used: Mapped[int] = mapped_column(Integer, default=0)
+    private_photo_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    cosplay_photo_used: Mapped[int] = mapped_column(Integer, default=0)
+    cosplay_photo_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    hot_pass_expires: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # V3.45.0: достижения и ежедневный подарок. Auto-migrated.
+    achievements: Mapped[str] = mapped_column(String(512), default="")
+    last_daily_gift_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    total_private_photos: Mapped[int] = mapped_column(Integer, default=0)
+    # V3.55.5: daily streak gift (1/1/1/1/1/1/3 🍑, cap 15). Own columns so
+    # the gift streak never mixes with the chat streak_count/streak_last_date
+    # gamification rail or the V3.45 free-photo last_daily_gift_date push.
+    # ``gift_last_day`` = which 03:00-MSK day key was already consumed.
+    # Auto-migrated by services/db.py.
+    gift_last_day: Mapped[date | None] = mapped_column(Date, nullable=True)
+    gift_streak: Mapped[int] = mapped_column(Integer, default=0)
+
+
+# V3.37.0: money affiliate program. One row per converted referral — the
+# permanent link between the invitee and the referrer that the commission
+# ledger reads on every purchase the invitee makes.
+class Referral(Base):
+    __tablename__ = "referrals"
+    __table_args__ = (UniqueConstraint("invitee_user_id", name="uq_referral_invitee"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    referrer_user_id: Mapped[int] = mapped_column(Integer, index=True, nullable=False)
+    invitee_user_id: Mapped[int] = mapped_column(Integer, index=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+# V3.55.5: promo codes table — one row per code. Redemption is one-per-user
+# (idempotent via grant_photo_credits reason `promo_<CODE>`), the global cap is
+# enforced by an atomic `UPDATE ... WHERE activated_count < max_activations`.
+# max_activations=0 means unlimited; expires_at is naive UTC (nullable = never);
+# source_tag feeds the growth attribution events.
+class PromoCode(Base):
+    __tablename__ = "promo_codes"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    code: Mapped[str] = mapped_column(String(24), unique=True, index=True)
+    credits: Mapped[int] = mapped_column(Integer, default=0)
+    max_activations: Mapped[int] = mapped_column(Integer, default=0)
+    activated_count: Mapped[int] = mapped_column(Integer, default=0)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    source_tag: Mapped[str | None] = mapped_column(String(48), nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+# V3.37.0: partner balance ledger. kind='commission' credits a percent of a
+# referred user's payment; kind='payout' (status pending -> paid/cancelled)
+# is the withdrawal request. source_charge_id is unique so a retried payment
+# webhook can never double-credit a commission.
+class PartnerTransaction(Base):
+    __tablename__ = "partner_transactions"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    amount_rub: Mapped[float] = mapped_column(Float, nullable=False)
+    # commission / pending / paid / cancelled
+    status: Mapped[str] = mapped_column(String(16), default="done")
+    product: Mapped[str] = mapped_column(String(64), default="")
+    source_charge_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+
+
+# V3.21.0: one milestone photo per relationship level — the couple album.
+class CoupleAlbum(Base):
+    __tablename__ = "couple_album"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, nullable=False)
+    level: Mapped[int] = mapped_column(Integer, nullable=False)
+    delivery_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+# V3.45.0: приватная галерея фото «наедине» и «косплей». Кэш + пересмотр.
+class PrivateGallery(Base):
+    __tablename__ = "private_gallery"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, nullable=False)
+    character_id: Mapped[str] = mapped_column(String(64), default="")
+    category: Mapped[str] = mapped_column(String(32), nullable=False)  # lingerie/nude_art/roleplay/suggestive/cosplay
+    type_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    prompt_hash: Mapped[str] = mapped_column(String(64), index=True)  # для кэша
+    image_bytes: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    telegram_file_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+# V3.19.0: personal characters built through the in-chat constructor. One row
+# per user; character_id is stable ('custom_<telegram_id>') so chat history,
+# memory and relationship rows attach to it like to any built-in character.
+class CustomCharacter(Base):
+    __tablename__ = "custom_characters"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # V3.44.6: allow multiple characters per user — removed unique constraint.
+    telegram_id: Mapped[str] = mapped_column(String(64), index=True)
+    character_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    display_name: Mapped[str] = mapped_column(String(80), default="")
+    params_json: Mapped[str] = mapped_column(Text, default="{}")
+    avatar_file_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    face_file_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # V3.44.4: extended constructor fields — backstory, personality, community publishing.
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    personality: Mapped[str | None] = mapped_column(Text, nullable=True)
+    backstory: Mapped[str | None] = mapped_column(Text, nullable=True)
+    community_published: Mapped[bool] = mapped_column(Boolean, default=False)
+    # V3.45.28: human moderation gate for the «Сообщество» витрина. Only the
+    # submit-to-community action routes a persona through admin review — a
+    # private creation stays 'none'. Existing rows default to 'none' and keep
+    # their current storefront visibility untouched.
+    moderation_status: Mapped[str] = mapped_column(String(16), default="none")
+    photo_reference_file_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # V3.45.28: free-text tags typed at creation (normalized server-side), stored
+    # as a comma-joined string. Drives the storefront «tags» chips + community
+    # filter. Nullable so legacy rows simply render without tags.
+    tags: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # V3.44.6: author revenue sharing — creator earns % from spending on this character.
+    author_telegram_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    author_revenue_percent: Mapped[float] = mapped_column(Float, default=5.0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class ConstructorDraft(Base):
+    """V3.44.13: a constructor draft persisted in Postgres.
+
+    The wizard session used to live only in memory, so a Railway redeploy
+    between payment and ``save_custom_character`` silently ate the paid
+    persona (owner: «в итоге отображается только один персонаж»). The draft
+    survives restarts; the startup scan resumes paid-but-unfinished ones.
+    """
+    __tablename__ = "constructor_drafts"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    telegram_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    params_json: Mapped[str] = mapped_column(Text, default="{}")
+    # Mini App face-swap reference arrives as a base64 data URL; kept here so a
+    # resumed creation can still anchor her identity.
+    photo_reference_base64: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # 'peaches' / 'stars' / 'webapp_admin' / 'webapp_credit' — how she was paid,
+    # so a resumed run refunds through the right branch when the avatar fails.
+    source: Mapped[str] = mapped_column(String(16), default="")
+    paid: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Set while a _finish_constructor run works on her; a fresh claim means a
+    # live run owns the draft, a stale one means the deploy killed it.
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    done: Mapped[bool] = mapped_column(Boolean, default=False)
+    # V3.44.15: how many runs already tried her. The sweep gives up after
+    # MAX_CONSTRUCTOR_ATTEMPTS and refunds instead of looping forever
+    # (owner: «он рисует персонажа всё» — a failing save retried every 12 min).
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class AuthorRevenue(Base):
+    """V3.44.6: tracks author earnings from spending on their custom characters."""
+    __tablename__ = "author_revenue"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    author_telegram_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    character_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    spender_telegram_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    amount_stars: Mapped[float] = mapped_column(Float, nullable=False)
+    author_earnings_stars: Mapped[float] = mapped_column(Float, nullable=False)
+    revenue_percent: Mapped[float] = mapped_column(Float, default=5.0)
+    source: Mapped[str] = mapped_column(String(32), nullable=False)  # 'photo', 'video', 'constructor', etc.
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class ChatMedia(Base):
+    """V3.44.8: persistent storage for in-app chat media (photos/circles/voice).
+
+    Railway's ephemeral disk wipes data/app_media on every redeploy, so photo
+    messages in the chat history 404'd afterwards («висят как сообщения»).
+    The bytes live in PostgreSQL; the disk file is only a re-materializable
+    cache served by chat_media_file_path().
+    """
+    __tablename__ = "chat_media"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    telegram_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    filename: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    content_type: Mapped[str] = mapped_column(String(32), default="application/octet-stream")
+    data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class AchievementBadge(Base):
+    """V3.47.1: admin-uploaded art attached to an achievement/mission. The bytes
+    live in PostgreSQL (Railway's disk is ephemeral, like ChatMedia) so a badge
+    survives redeploys. One image per achievement ``key``."""
+    __tablename__ = "achievement_badges"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    key: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    image_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    content_type: Mapped[str] = mapped_column(String(32), default="image/jpeg")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class ProactivePhoto(Base):
+    """V3.47.2: the owner's pool of media the bot attaches at random to the
+    morning/evening ritual messages, so a proactive ping reads as a real photo
+    from the character. V3.47.3: the pool also holds GIFs and short videos —
+    'kind' is 'photo' | 'gif' | 'video'. Bytes live in PostgreSQL
+    (ephemeral disk safe)."""
+    __tablename__ = "proactive_photos"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    image_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    content_type: Mapped[str] = mapped_column(String(32), default="image/jpeg")
+    kind: Mapped[str] = mapped_column(String(8), default="photo")
+    # V3.56.7: every pool shot belongs to ONE character — a proactive photo is
+    # her face or it is nobody's. NULL = legacy untagged row: never sent, the
+    # owner re-tags or deletes it in the admin pool screen.
+    character_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class PageGalleryShot(Base):
+    """V3.47.4: admin-set visuals for the character-page carousel ONLY — pure
+    storefront art that never touches the canonical references, so generated
+    photos keep the locked appearance. Bytes live in PostgreSQL (ephemeral
+    disk safe); URLs carry the row id, so a swap is instantly cache-busted."""
+    __tablename__ = "page_gallery_shots"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    character_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    image_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    content_type: Mapped[str] = mapped_column(String(32), default="image/jpeg")
+    position: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class CardOverride(Base):
+    """V3.48.1: the admin-set storefront media (photo/gif/webp/mp4) of one
+    character. V3.43.3 kept it ONLY as a file under ``data/card_media/<id>/``,
+    which lives on Railway's ephemeral disk — so the owner had to re-upload every
+    card after every redeploy. The bytes now live in PostgreSQL; the disk file is
+    a re-materializable cache served by ``character_card_override()``. One active
+    override per ``character_id`` (mirrors the single ``card_override.<ext>``)."""
+    __tablename__ = "card_overrides"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    character_id: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    ext: Mapped[str] = mapped_column(String(8), nullable=False)
+    content_type: Mapped[str] = mapped_column(String(32), default="image/jpeg")
+    image_bytes: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class Message(Base):
+    __tablename__ = "messages"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, nullable=False)
+    character_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    role: Mapped[str] = mapped_column(String(16), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    # V3.39.0: in-app chat media (photo / circle / voice) rides on the same
+    # messages table so the Mini App history renders it like the bot dialog.
+    media_kind: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    media_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+
+class Memory(Base):
+    __tablename__ = "memories"
+    __table_args__ = (UniqueConstraint("user_id", "character_id", "memory_key", name="uq_memory_key"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, nullable=False)
+    character_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    memory_type: Mapped[str] = mapped_column(String(32), default="fact")
+    memory_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    confidence: Mapped[float] = mapped_column(Float, default=0.7)
+    importance: Mapped[float] = mapped_column(Float, default=0.5)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class CommunicationProfile(Base):
+    __tablename__ = "communication_profiles"
+    __table_args__ = (UniqueConstraint("user_id", "character_id", name="uq_communication_profile"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, nullable=False)
+    character_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    preferred_language: Mapped[str] = mapped_column(String(16), default="auto")
+    language_confidence: Mapped[float] = mapped_column(Float, default=0.0)
+    message_count: Mapped[int] = mapped_column(Integer, default=0)
+    avg_message_length: Mapped[float] = mapped_column(Float, default=0.0)
+    emoji_rate: Mapped[float] = mapped_column(Float, default=0.0)
+    question_rate: Mapped[float] = mapped_column(Float, default=0.0)
+    uppercase_rate: Mapped[float] = mapped_column(Float, default=0.0)
+    slang_level: Mapped[float] = mapped_column(Float, default=0.0)
+    style_json: Mapped[str] = mapped_column(Text, default="{}")
+    slang_json: Mapped[str] = mapped_column(Text, default="[]")
+    token_counts_json: Mapped[str] = mapped_column(Text, default="{}")
+    visual_json: Mapped[str] = mapped_column(Text, default="{}")
+    last_analyzed_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+class CharacterState(Base):
+    __tablename__ = "character_states"
+    __table_args__ = (UniqueConstraint("user_id", "character_id", name="uq_character_state"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, nullable=False)
+    character_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    mood: Mapped[str] = mapped_column(String(32), default="neutral")
+    energy: Mapped[float] = mapped_column(Float, default=0.65)
+    affection: Mapped[float] = mapped_column(Float, default=0.45)
+    playfulness: Mapped[float] = mapped_column(Float, default=0.55)
+    irritation: Mapped[float] = mapped_column(Float, default=0.0)
+    attention_points: Mapped[int] = mapped_column(Integer, default=0)
+    activity: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    location: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    outfit: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    hairstyle: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    recent_outfits_json: Mapped[str] = mapped_column(Text, default='[]')
+    recent_hairstyles_json: Mapped[str] = mapped_column(Text, default='[]')
+    pending_hook: Mapped[str | None] = mapped_column(Text, nullable=True)
+    last_nudge_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # V3.44.16: how many retention nudges this silence cycle already used —
+    # the scheduler repeats nudges (RETENTION_MAX_NUDGES) instead of the old
+    # one-per-lifetime guard. Reset when the user comes back. Auto-migrated.
+    nudge_count: Mapped[int] = mapped_column(Integer, default=0)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class CharacterCard(Base):
+    __tablename__ = "character_cards"
+    character_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    display_name: Mapped[str] = mapped_column(String(80), nullable=False)
+    gender: Mapped[str] = mapped_column(String(16), default="female")
+    age: Mapped[int] = mapped_column(Integer, default=18)
+    short_bio: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(24), default="soon")
+    button_emoji: Mapped[str] = mapped_column(String(16), default="👩")
+    is_visible: Mapped[bool] = mapped_column(Boolean, default=True)
+    card_photo_file_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class PaymentMethod(Base):
+    __tablename__ = "payment_methods"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    method_key: Mapped[str] = mapped_column(String(80), unique=True, index=True, nullable=False)
+    display_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    method_type: Mapped[str] = mapped_column(String(24), default="qr")
+    status: Mapped[str] = mapped_column(String(24), default="disabled")
+    scope: Mapped[str] = mapped_column(String(32), default="external_only")
+    is_system: Mapped[bool] = mapped_column(Boolean, default=False)
+    qr_photo_file_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    external_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    instructions: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class PlategaOrder(Base):
+    """V3.44.21: card/SBP orders paid on the Platega page (platega.io).
+
+    Replaced the retired FreeKassa orders. ``transaction_id`` is the Platega
+    UUID returned by POST /v2/transaction/process — the status callback
+    carries it back, so the grant lands on exactly this row.
+    """
+    __tablename__ = "platega_orders"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # V3.26.2 lesson: BigInteger — Telegram IDs above 2^31-1 overflowed the
+    # 32-bit INTEGER and the order INSERT crashed.
+    telegram_id: Mapped[int] = mapped_column(BigInteger, index=True, nullable=False)
+    product: Mapped[str] = mapped_column(String(64), nullable=False)
+    amount: Mapped[str] = mapped_column(String(24), nullable=False)
+    # pending / paid / canceled / chargedback
+    status: Mapped[str] = mapped_column(String(24), default="pending", index=True)
+    transaction_id: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
+    paid_payload: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+# V3.28.0: persistent registry of long-running generation jobs (photo /
+# video / circle / constructor). In-memory asyncio.Task dicts die with the
+# process; these rows survive redeploys and are visible to future workers.
+class BackgroundJob(Base):
+    __tablename__ = "background_jobs"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, index=True, nullable=False)
+    kind: Mapped[str] = mapped_column(String(32), index=True, nullable=False)
+    # running / done / failed / recovered (restart sweep) / superseded
+    status: Mapped[str] = mapped_column(String(16), default="running", index=True)
+    # premium users get 1 — a future worker orders by priority desc.
+    priority: Mapped[int] = mapped_column(Integer, default=0)
+    payload_json: Mapped[str] = mapped_column(Text, default="{}")
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class UserGeneration(Base):
+    """V3.51.1: an audit row for every media a user asks the Mini App to render
+    (picture studio, chat photo-on-request, private/cosplay/video). The owner
+    browses these in the app's admin feed. The prompt/scene is stored so review
+    survives even after the ephemeral image file is gone on a Railway redeploy.
+    Auto-created by services/db.py."""
+    __tablename__ = "user_generations"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, index=True, nullable=False)
+    # picture | photo | circle | video | hot | cosplay
+    kind: Mapped[str] = mapped_column(String(16), index=True, nullable=False)
+    character_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    prompt: Mapped[str] = mapped_column(Text, default="")
+    filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # V3.56.0: which engine actually rendered this and what it cost the owner,
+    # so the admin feed shows the money trail (spicyapi/fal/gemini/pool) instead
+    # of just the picture. Auto-added by services/db.py for existing rows.
+    engine: Mapped[str | None] = mapped_column(String(48), nullable=True)
+    cost_usd: Mapped[float] = mapped_column(default=0.0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+
+
+# V3.29.0: persistent multi-step dialog wizards (character constructor, paid
+# fantasy input, photo offers...). In-memory dicts died with the process;
+# these rows let a redeploy keep the conversation mid-wizard.
+class DialogSession(Base):
+    __tablename__ = "dialog_sessions"
+    __table_args__ = (UniqueConstraint('telegram_id', 'session_key', name='uq_dialog_session'),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, index=True, nullable=False)
+    session_key: Mapped[str] = mapped_column(String(32), nullable=False)
+    payload_json: Mapped[str] = mapped_column(Text, default='{}')
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+class Reminder(Base):
+    __tablename__ = "reminders"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, nullable=False)
+    reminder_type: Mapped[str] = mapped_column(String(32), default="reminder")
+    text: Mapped[str] = mapped_column(Text)
+    due_at_utc: Mapped[datetime] = mapped_column(DateTime, index=True)
+    timezone: Mapped[str] = mapped_column(String(64), default="UTC")
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    max_attempts: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+class Subscription(Base):
+    __tablename__ = "subscriptions"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, nullable=False)
+    plan: Mapped[str] = mapped_column(String(32), default="premium")
+    status: Mapped[str] = mapped_column(String(32), default="active")
+    stars_amount: Mapped[int] = mapped_column(Integer, default=0)
+    started_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    telegram_charge_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+class StarTransaction(Base):
+    __tablename__ = "star_transactions"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, nullable=False)
+    transaction_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    product: Mapped[str] = mapped_column(String(64), nullable=False)
+    stars: Mapped[int] = mapped_column(Integer, nullable=False)
+    telegram_charge_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
+    provider: Mapped[str] = mapped_column(String(32), default="stars")
+    provider_payload: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class WalletPayTransaction(Base):
+    __tablename__ = "wallet_pay_transactions"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, nullable=False)
+    invoice_id: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    product: Mapped[str] = mapped_column(String(64), nullable=False)
+    amount_usd: Mapped[float] = mapped_column(Float, nullable=False)
+    stars_equivalent: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default="pending")
+    payload: Mapped[str | None] = mapped_column(Text, nullable=True)
+    metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class Achievement(Base):
+    __tablename__ = "achievements"
+    __table_args__ = (UniqueConstraint("user_id", "achievement_key", name="uq_user_achievement"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, nullable=False)
+    achievement_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    display_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    unlocked_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class ProductEvent(Base):
+    __tablename__ = "product_events"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(Integer, index=True, nullable=True)
+    character_id: Mapped[str] = mapped_column(String(64), index=True, default="anna_01")
+    event_name: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    value: Mapped[float] = mapped_column(Float, default=0.0)
+    metadata_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+
+class CharacterStat(Base):
+    # V3.40.0: per-character storefront view counter — the «👁 427k» badge on
+    # the Come Closer cards the owner benchmarked. Auto-migrated by db.py.
+    __tablename__ = "character_stats"
+    character_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    views: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    # V3.43.0: the «♡ 189» like counter from the benchmarked character page.
+    likes: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class CharacterLike(Base):
+    # V3.43.0: one row per (girl, user) — the like marker behind the counter;
+    # the composite PK makes double-likes impossible and unlikes exact.
+    __tablename__ = "character_likes"
+    character_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+class ProviderStat(Base):
+    # V3.40.0: per-provider success/failure counters for the admin «Отказы»
+    # screen, so a flaky engine is visible in one tap instead of in logs.
+    __tablename__ = "provider_stats"
+    provider: Mapped[str] = mapped_column(String(64), primary_key=True)
+    ok: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    fail: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_error: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+class UserConsent(Base):
+    __tablename__ = 'user_consents'
+    __table_args__ = (UniqueConstraint('user_id', name='uq_user_consent'),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, index=True, nullable=False)
+    terms_version: Mapped[str] = mapped_column(String(32), default='2026-08-14')
+    privacy_version: Mapped[str] = mapped_column(String(32), default='2026-08-14')
+    accepted: Mapped[bool] = mapped_column(Boolean, default=False)
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+# V3.44.0: public comments under character cards — the social layer.
+class CharacterComment(Base):
+    __tablename__ = "character_comments"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    character_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, index=True, nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+
+
+# V3.44.0: push notification preferences per user.
+class NotificationPref(Base):
+    __tablename__ = "notification_prefs"
+    __table_args__ = (UniqueConstraint("telegram_id", name="uq_notification_pref"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True, nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    daily_bonus: Mapped[bool] = mapped_column(Boolean, default=True)
+    new_messages: Mapped[bool] = mapped_column(Boolean, default=True)
+    character_updates: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
+
+
+# V3.44.0: daily bonus wheel — one spin per calendar day per user.
+class DailyBonus(Base):
+    __tablename__ = "daily_bonuses"
+    __table_args__ = (UniqueConstraint("telegram_id", "date", name="uq_daily_bonus"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, index=True, nullable=False)
+    date: Mapped[str] = mapped_column(String(10), nullable=False)  # YYYY-MM-DD
+    reward_peaches: Mapped[int] = mapped_column(Integer, default=0)
+    reward_stars: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+# V3.44.0: simulated incoming messages — "she messages first" feature.
+class SimulatedMessage(Base):
+    __tablename__ = "simulated_messages"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, index=True, nullable=False)
+    character_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False)
+    delivered: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)      
+
+
+# V3.44.18: LLM spend ledger — one row per completion. Before this the usage
+# block came back from the provider and was thrown away, so the only answer to
+# «куда уходят деньги» was the OpenRouter dashboard. Rows are ~a few hundred a
+# day at current traffic; `day` exists so the daily brake sums without scanning.
+class LlmUsage(Base):
+    __tablename__ = "llm_usage"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    day: Mapped[date] = mapped_column(Date, index=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+    # dialogue | rewrite | proactive | memory_extraction | adaptation_analysis
+    # | relationship_pulse | photo_idea | photo_reaction
+    purpose: Mapped[str] = mapped_column(String(32), index=True, nullable=False)
+    provider: Mapped[str] = mapped_column(String(16), nullable=False)
+    model: Mapped[str] = mapped_column(String(64), nullable=False)
+    prompt_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    completion_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    # reasoning tokens are billed as output; this is what makes MiniMax M3
+    # reasoning mode expensive, so it must be separable from the reply itself.
+    reasoning_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
+    # True when the provider reported the real bill, False when we estimated it
+    # from the configured per-million prices.
+    billed_cost: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+# V3.44.18: image spend ledger — one row per billed provider call, INCLUDING
+# calls whose picture was later thrown away. photo_deliveries.estimated_cost_usd
+# only exists for successful deliveries and priced the main (Gemini) engine at
+# $0, so failed studio renders — half of all attempts — were pure invisible fire.
+class ImageSpend(Base):
+    __tablename__ = "image_spend"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    day: Mapped[date] = mapped_column(Date, index=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)
+    # seedream45 / gemini_image / openai, plus the concrete fal route when known
+    engine: Mapped[str] = mapped_column(String(48), index=True, nullable=False)
+    scene: Mapped[str] = mapped_column(String(48), nullable=False)
+    # the provider answered 2xx (a billed call) — a later local rejection of the
+    # image does not un-bill it
+    billed: Mapped[bool] = mapped_column(Boolean, default=True)
+    # and the frame actually reached the user
+    success: Mapped[bool] = mapped_column(Boolean, default=True)
+    cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
+
+
+class ChatGuest(Base):
+    """V3.61.2: «позвать в чат» — a second girl the user invited into one
+    girl's chat. One guest per (user, host chat). Auto-created."""
+    __tablename__ = "chat_guests"
+    user_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    character_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    guest_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+class AdminTestStage(Base):
+    """V3.60.9: the owner's «test level» override. It lived only in memory and
+    reset on every Railway redeploy; now it is a row per admin. Auto-created."""
+    __tablename__ = "admin_test_stages"
+    user_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    stage: Mapped[str] = mapped_column(String(32), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)

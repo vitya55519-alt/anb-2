@@ -1,0 +1,74 @@
+"""Dates feature: paid dates (Telegram Stars) gated by relationship level.
+A successful date boosts the relationship and ends with a fresh photo set
+from the date scene as the reward. Payment handling lives in main.py."""
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class Date:
+    id: str
+    name: str
+    emoji: str
+    min_level: int
+    cost: int          # Telegram Stars
+    affection: float   # relationship delta applied on a successful date
+    scene: str         # photo scene for the reward photo set
+    text: str          # short narration of the date
+
+
+DATES: tuple[Date, ...] = (
+    Date('cafe', 'Кофейня', '☕', 1, 5, 1.0, 'cafe',
+         'Мы сидим у окна, пьём латте и болтаем обо всём на свете. Она смеётся над твоими шутками и незаметно кладёт руку на твою.'),
+    Date('park', 'Прогулка в парке', '🌳', 1, 5, 1.0, 'park',
+         'Тёплый вечер, аллея, фонари. Вы идёте медленно, держась за руки, и время словно останавливается.'),
+    Date('cinema', 'Кино', '🎬', 2, 7, 1.5, 'cinema',
+         'Тёмный зал, последний ряд. Она кладёт голову тебе на плечо ещё до начала фильма.'),
+    Date('embankment', 'Набережная', '🌇', 2, 7, 1.5, 'embankment',
+         'Закат над водой, лёгкий ветер. Вы стоите у перил, и она то и дело смотрит на тебя, а не на вид.'),
+    Date('restaurant', 'Ресторан', '🍷', 3, 10, 2.0, 'restaurant',
+         'Свечи, тихая музыка, бокал вина. Она выглядит особенно красиво этим вечером — и знает это.'),
+    Date('rooftop', 'Крыша', '🌃', 4, 12, 2.5, 'rooftop',
+         'Огни города внизу, плед на двоих и тишина, в которой слышно только её дыхание рядом.'),
+    Date('club', 'Клуб', '🪩', 5, 15, 3.0, 'club',
+         'Громкая музыка, танцы до утра. Она танцует только с тобой — и всем вокруг это очевидно.'),
+    # V3.21.0: premium plateau dates (levels 7-8).
+    Date('spa', 'СПА для двоих', '🛁', 7, 20, 3.5, 'evening',
+         'Халаты, масла, тёплые камни и никакой спешки. Весь вечер мы заботимся друг о друге.'),
+    Date('night', 'Ночь вместе', '🌙', 8, 25, 4.0, 'evening',
+         'Никуда не нужно идти: весь вечер и вся ночь только наши. Она засыпает у тебя на плече и просыпается с улыбкой.'),
+)
+
+
+def get_available(level: int) -> list[Date]:
+    return [date for date in DATES if date.min_level <= max(1, min(8, level))]
+
+
+def get_all() -> list[Date]:
+    return list(DATES)
+
+
+def get_locked(level: int) -> list[Date]:
+    """Dates still closed for this level — shown with a lock in the menu."""
+    return [date for date in DATES if date.min_level > max(1, min(8, level))]
+
+
+def get(date_id: str) -> Date | None:
+    for date in DATES:
+        if date.id == date_id:
+            return date
+    return None
+
+
+def scene_direction(date: Date) -> str:
+    """V3.64.1: the date starts as a live scene in the chat instead of the canned
+    narration (kept as the fallback). The date then continues in the dialog."""
+    return (f'СЦЕНА (он пригласил тебя на свидание в приложении): {date.name}. Обстановка: {date.text} '
+            'Начни это свидание прямо сейчас: в звёздочках — как ты пришла, во что одета и что вокруг '
+            '(1–2 конкретные детали), потом твоя реплика ему. Добавь маленькое неожиданное событие '
+            '(музыка, официант, погода, игра, твой сюрприз), чтобы было интересно. Закончи крючком — '
+            'вопросом, вызовом или выбором из двух вариантов, что делать дальше; свидание продолжается '
+            'в переписке. 3–5 предложений. Откровенность — строго по этапу отношений.')
+
+
+def user_action(date: Date) -> str:
+    return f'*приглашаю тебя на свидание: {date.name.lower()}* {date.emoji}'

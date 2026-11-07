@@ -1,0 +1,2464 @@
+"""V3.33.0: Telegram Mini App (WebApp) backend.
+
+The storefront the owner benchmarked (@come_closer_bot) is a Telegram Mini
+App — a web page opened from the bot's profile («Открыть приложение»).
+This service powers ours on the SAME aiohttp app Railway already serves
+(FreeKassa webhooks / healthz):
+
+- ``validate_init_data`` — the official Telegram initData HMAC check
+  (secret = HMAC("WebAppData", bot_token); hash = HMAC(secret, data_check_string));
+- ``api_me`` — profile payload (premium, selected girl, relationship level, streak);
+- ``api_characters`` — character cards for the storefront grid;
+- ``api_shop`` — structured prices for the shop tab;
+- ``api_legal`` — privacy policy / user agreement / tariffs / support texts,
+  so the Platega-required documents are visible in the Mini App too;
+- ``character_photo`` — canonical face PNGs (built-ins) / cached constructor
+  avatars (custom personas), served as bytes without any Telegram API call.
+
+The module deliberately does NOT import main.py (the handlers live there and
+import this service — no circular imports).
+"""
+from __future__ import annotations
+
+import base64
+import hashlib
+import hmac
+import json
+import logging
+import re
+import secrets
+import time
+import zlib
+from pathlib import Path
+from urllib.parse import parse_qsl
+
+from sqlalchemy import func, select
+
+from config import (
+    MARITAL_CHANGE_PEACHES,
+    CHARACTER_ID,
+    CHAT_PHOTO_OFFER_STARS,
+    CHAT_PHOTO_PEACH_COST,
+    CONSTRUCTOR_COST_PEACHES,
+    CONSTRUCTOR_COST_RUB,
+    CONSTRUCTOR_PRICE_USD,
+    CUSTOM_PHOTO_COST_STARS,
+    FREE_LATE_FROM_DAY,
+    FREE_MESSAGES_PER_DAY,
+    FREE_MESSAGES_PER_DAY_LATE,
+    FREE_PHOTOS_LEVEL_1_2,
+    FREE_PHOTOS_LEVEL_3_6,
+    GALLERY_DOWNLOAD_STARS,
+    PEACH_PACK_10_STARS,
+    PEACH_PACK_30_STARS,
+    PEACH_PACK_100_STARS,
+    PEACH_PACK_10_RUB,
+    PEACH_PACK_30_RUB,
+    PEACH_PACK_100_RUB,
+    PEACH_CUSTOM_STARS_PER_UNIT,
+    PEACH_CUSTOM_RUB_PER_UNIT,
+    PEACH_CUSTOM_UNIT,
+    PEACH_PACK_BONUS,
+    PEACH_PACK_CREDITS,
+    PEACH_SCALE,
+    PHOTO_COST_STARS,
+    PLATEGA_ENABLED,
+    PLATEGA_PREMIUM_PRICE_RUB,
+    PLATEGA_PREMIUM_WEEKLY_PRICE_RUB,
+    PREMIUM_TRIAL_DAYS, PREMIUM_TRIAL_STARS, PLATEGA_PREMIUM_TRIAL_PRICE_RUB, PREMIUM_TRIAL_PRICE_USD,
+    PLATEGA_PREMIUM_QUARTERLY_PRICE_RUB,
+    PREMIUM_QUARTERLY_STARS,
+    PREMIUM_QUARTERLY_PHOTO_CREDITS,
+    PREMIUM_MONTHLY_PHOTO_CREDITS,
+    PREMIUM_MONTHLY_STARS,
+    PREMIUM_PRICE_USD,
+    PREMIUM_WEEKLY_PHOTO_CREDITS,
+    PREMIUM_WEEKLY_PRICE_USD,
+    PREMIUM_WEEKLY_STARS,
+    QUEST_REPLAY_STARS,
+    UNDRESS_PEACH_COST,
+    TELEGRAM_TOKEN,
+    VIDEO_COST_STARS,
+    VIDEO_PEACH_COST,
+    VIDEO_PREMIUM_FREE_DAILY,
+    WALLET_PAY_ENABLED,
+    WEBAPP_INIT_DATA_MAX_AGE,
+    fiat_values,
+)
+from models.app_models import CharacterCard, CharacterComment, CharacterLike, CharacterStat, ChatMedia, Message, NotificationPref, SimulatedMessage, User
+from services import legal_service
+from services.access_service import is_premium
+from services.character_card_service import get_card, get_scenario_hook, list_cards, update_card
+from services.custom_character_service import (
+    CONSTRUCTOR_STEPS, OPTION_LABELS_EN, STEP_TITLES_EN, STEP_GROUPS,
+    custom_character_id, is_custom_character,
+    get_all_custom_characters, get_author_characters, get_custom_character_by_id,
+    get_author_earnings_by_character, set_community_published,
+    update_custom_character_text, delete_custom_character,
+    parse_tags, request_community_review, set_moderation_status,
+)
+from services.db import SessionLocal
+from services.ui_lang import EN, user_lang
+
+ROOT = Path(__file__).resolve().parents[1]
+WEBAPP_INDEX = ROOT / 'webapp' / 'index.html'
+
+logger = logging.getLogger(__name__)
+
+# V3.52.0: read-state for the «Чаты» tab — which conversation the user last
+# opened in the app. It lives in dialog_sessions (dict-compatible DialogStore)
+# so a Railway redeploy never re-lights the «new» badge on chats already read,
+# and no new column/migration is needed.
+from services import dialog_store as _dialog_store
+_chat_reads = _dialog_store.DialogStore('chat_reads')  # telegram_id -> {character_id: iso_utc}
+
+
+def _utcnow_iso() -> str:
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+
+
+def mark_chat_read(telegram_id, character_id):
+    """Remember the user has just read this conversation (called on app open and
+    on every conversational reply, so only a later proactive/life message shows
+    as new). Fail-silent — a read stamp is never worth breaking a reply."""
+    try:
+        tg = int(telegram_id)
+        current = dict(_chat_reads.get(tg) or {})
+        current[str(character_id)] = _utcnow_iso()
+        _chat_reads[tg] = current
+    except Exception:
+        logger.warning('mark_chat_read failed tg=%s', telegram_id)
+
+
+def _chat_reads_map(telegram_id) -> dict:
+    try:
+        return dict(_chat_reads.get(int(telegram_id)) or {})
+    except Exception:
+        return {}
+
+# V3.38.0: user-generated pictures from the «Картинки» studio tab live
+# outside the character system — one folder per user, meta.json index.
+APP_PICTURES_DIR = ROOT / 'data' / 'app_pictures'
+
+# One freeform picture costs 10 photo credits (🍑) — the same balance the bot
+# charges for photos, so shop purchases feed both chat photos and the studio
+# (V3.44.22: was 150, which priced a picture like five months of Premium).
+# V3.65.0: ×PEACH_SCALE with the rest of the peach economy (1000 🍑).
+WEBAPP_PICTURE_COST_CREDITS = 10 * PEACH_SCALE
+
+# V3.54.0: the studio video (image-to-video of the user's own photo, or a
+# prompt-generated frame) is charged only after a successful render.
+# V3.55.5: unified — the price is the single peach-rail video knob from config
+# (20 🍑): no shadow per-surface prices anymore; a clip burns a picture render
+# plus the video engine, hence double the still picture (10 🍑).
+WEBAPP_VIDEO_COST_CREDITS = VIDEO_PEACH_COST
+
+# V3.54.0: an uploaded reference photo is accepted only as these common web
+# image types and only up to this decoded size, so a stray huge file or a
+# non-image never reaches an engine.
+STUDIO_UPLOAD_MAX_BYTES = 8 * 1024 * 1024
+STUDIO_UPLOAD_MIME_EXT = {'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/webp': 'webp'}
+
+# The studio is a public, fully-clothed surface. Prompts that point at minors
+# or coercion are rejected before any engine call; every prompt additionally
+# gets the SFW constraint appended so the output stays within the same
+# boundaries as the rest of the product.
+_PICTURE_BLOCKED_RE = re.compile(
+    r'(child|children|kid|kids|teen|teenager|minor|underage|loli|shota|'
+    r'школьниц|школьник|школяр|реб[её]н|детск|девочк|мальчик|несовершеннолетн|подрост|'
+    r'rape|raped|изнасил|насили|принуд|non.?consensual)',
+    re.IGNORECASE,
+)
+PICTURE_PROMPT_SUFFIX = (
+    ', fully clothed, elegant outfit, safe for work, no nudity, '
+    'high quality, detailed, cinematic lighting'
+)
+# V3.51.2: the studio's uncensored leg (adult-confirmed users only) drops the
+# SFW constraint and keeps just a quality tail, so the user's own prompt drives
+# the content while minors/coercion stay hard-blocked by picture_prompt_allowed.
+PICTURE_PROMPT_SUFFIX_ADULT = (
+    ', high quality, detailed, cinematic lighting, natural skin, realistic'
+)
+PICTURE_PROMPT_MAX_LEN = 800
+PICTURE_PROMPT_MIN_LEN = 4
+
+# Studio selectors — the user-facing «Стиль»/«Формат» dropdowns only prepend /
+# append neutral composition words; the SFW constraint is mandatory.
+PICTURE_STYLE_PREFIXES = {
+    'anime': 'anime style illustration, vibrant colors, ',
+    'realistic': 'photorealistic photo, natural lighting, ',
+    'fantasy': 'fantasy digital art, ',
+}
+PICTURE_FORMAT_SUFFIXES = {
+    'square': ', square 1:1 composition',
+    'portrait': ', vertical portrait 2:3 composition',
+}
+
+
+def picture_prompt_allowed(prompt: str) -> bool:
+    """V3.38.0: hard reject for the studio — minors/coercion never reach an engine."""
+    return not _PICTURE_BLOCKED_RE.search(prompt or '')
+
+
+# V3.86.0: owner — explicit studio pictures are a Premium feature. A prompt
+# that asks for nudity / sex / underwear is «spicy»: non-Premium users get the
+# Premium sheet instead of a render (and their other prompts keep the SFW tail).
+_PICTURE_SPICY_RE = re.compile(
+    r'(?i)(голая|голой|голую|голые|голых|обнаж|раздет|раздев|разден|без\s+одежд|'
+    r'без\s+бель|без\s+лифчик|без\s+трус|топлес|\bню\b|сиськ|сисек|грудь\s+наруж|сосок|соски|'
+    r'пизд|писю|киск[аеиу]\b|член|пенис|секс|трах|ебл|ебёт|ебет|минет|отсос|кончил|кончает|сперм|оргазм|'
+    r'мастурб|дроч|эрот|порн|пошл|похот|бдсм|в\s+белье|нижн\w*\s+бель|бельё|белье|'
+    r'трусик|трусы|стринг|лифчик|бюстгальтер|чулк|\bnude|\bnaked|nudity|topless|\bnsfw|'
+    r'\bsex|\bporn|erotic|lingerie|underwear|panties|\bbra\b|thong|nipple|boobs|\btits|'
+    r'pussy|vagina|\bcock\b|\bdick\b|penis|blowjob|\bcum\b|orgasm|masturb|hentai|\bbdsm|'
+    r'undress|\bstrip(?!e))'
+)
+
+
+def picture_prompt_spicy(prompt: str) -> bool:
+    """V3.86.0: does a studio prompt ask for adult content (Premium-only)?"""
+    return bool(_PICTURE_SPICY_RE.search(prompt or ''))
+
+
+def picture_final_prompt(prompt: str, style: str = 'anime', fmt: str = 'square', adult: bool = False) -> str:
+    """User text + the chosen style/format + the standing constraint. V3.51.2:
+    an adult render swaps the mandatory SFW tail for a quality-only tail."""
+    base = (prompt or '').strip()[:PICTURE_PROMPT_MAX_LEN]
+    prefix = PICTURE_STYLE_PREFIXES.get(style, PICTURE_STYLE_PREFIXES['anime'])
+    suffix = PICTURE_FORMAT_SUFFIXES.get(fmt, PICTURE_FORMAT_SUFFIXES['square'])
+    tail = PICTURE_PROMPT_SUFFIX_ADULT if adult else PICTURE_PROMPT_SUFFIX
+    return prefix + base + suffix + tail
+
+
+def decode_data_image(data_url: str):
+    """V3.54.0: turn a ``data:<mime>;base64,<payload>`` upload into
+    ``(bytes, mime, ext)``. Returns ``None`` for a missing / oversized /
+    disallowed-type / undecodable payload so the caller can reject cleanly."""
+    try:
+        if not data_url or not isinstance(data_url, str):
+            return None
+        header, _, payload = data_url.partition(',')
+        if ';' not in header or 'base64' not in header:
+            return None
+        # the header is ``data:<mime>;base64`` — the ``data:`` scheme itself
+        # must not leak into the mime lookup below.
+        mime = header.split(';', 1)[0].strip().lower()
+        if mime.startswith('data:'):
+            mime = mime[len('data:'):]
+        ext = STUDIO_UPLOAD_MIME_EXT.get(mime)
+        if not ext:
+            return None
+        raw = base64.b64decode(payload, validate=True)
+        if not raw or len(raw) > STUDIO_UPLOAD_MAX_BYTES:
+            return None
+        return raw, mime, ext
+    except Exception:
+        return None
+
+# Canonical face references used for storefront photos (no network needed).
+_FACE_REFERENCES = {
+    CHARACTER_ID: ('references', 'anna', '00_anna_canonical_face_v3.png'),
+    'alena_01': ('references', 'emily', '00_emily_canonical_face.png'),
+    'maria_01': ('references', 'maria', '00_maria_canonical_face.png'),
+    # V3.38.0: the Come Closer character pack storefront portraits.
+    'erika_01': ('references', 'erika', '00_erika_canonical_face.png'),
+    'sonya_01': ('references', 'sonya', '00_sonya_canonical_face.png'),
+    'vika_01': ('references', 'vika', '00_vika_canonical_face.png'),
+    'alisa_01': ('references', 'alisa', '00_alisa_canonical_face.png'),
+    'mila_01': ('references', 'mila', '00_mila_canonical_face.png'),
+    # V3.44.0: new archetypes — fitness, artistic, and power.
+    'kate_01': ('references', 'kate', '00_kate_canonical_face.png'),
+    'sasha_01': ('references', 'sasha', '00_sasha_canonical_face.png'),
+    'rex_01': ('references', 'rex', '00_rex_canonical_face.png'),
+    # V3.48.0: the owner-photo character pack — seven new heroines.
+    'violetta_01': ('references', 'violetta', '00_violetta_canonical_face.png'),
+    'darina_01': ('references', 'darina', '00_darina_canonical_face.png'),
+    'eva_01': ('references', 'eva', '00_eva_canonical_face.png'),
+    'romina_01': ('references', 'romina', '00_romina_canonical_face.png'),
+    'kristina_01': ('references', 'kristina', '00_kristina_canonical_face.png'),
+    'zlata_01': ('references', 'zlata', '00_zlata_canonical_face.png'),
+    'veronika_01': ('references', 'veronika', '00_veronika_canonical_face.png'),
+    'lera_01': ('references', 'lera', '00_lera_canonical_face.png'),
+    'diana_01': ('references', 'diana', '00_diana_canonical_face.png'),
+    'nika_01': ('references', 'nika', '00_nika_canonical_face.png'),
+    'ksyusha_01': ('references', 'ksyusha', '00_ksyusha_canonical_face.png'),
+    'margo_01': ('references', 'margo', '00_margo_canonical_face.png'),
+    'alya_01': ('references', 'alya', '00_alya_canonical_face.png'),
+    'yuki_01': ('references', 'yuki', '00_yuki_canonical_face.png'),
+    'miko_01': ('references', 'miko', '00_miko_canonical_face.png'),
+    'rin_01': ('references', 'rin', '00_rin_canonical_face.png'),
+    'hana_01': ('references', 'hana', '00_hana_canonical_face.png'),
+    'vlada_01': ('references', 'vlada', '00_vlada_canonical_face.png'),
+    'milana_01': ('references', 'milana', '00_milana_canonical_face.png'),
+    'polina_01': ('references', 'polina', '00_polina_canonical_face.png'),
+    'dasha_01': ('references', 'dasha', '00_dasha_canonical_face.png'),
+    'kamila_01': ('references', 'kamila', '00_kamila_canonical_face.png'),
+    'rita_01': ('references', 'rita', '00_rita_canonical_face.png'),
+    'yulya_01': ('references', 'yulya', '00_yulya_canonical_face.png'),
+    'liza_01': ('references', 'liza', '00_liza_canonical_face.png'),
+    'kira_01': ('references', 'kira', '00_kira_canonical_face.png'),
+    'agata_01': ('references', 'agata', '00_agata_canonical_face.png'),
+    'jina_01': ('references', 'jina', '00_jina_canonical_face.png'),
+    'lana_01': ('references', 'lana', '00_lana_canonical_face.png'),
+}
+
+
+def validate_init_data(init_data: str, bot_token: str | None = None, max_age_seconds: int | None = None) -> dict | None:
+    """Verify Telegram WebApp initData; return its fields, or None if invalid.
+
+    Per the official spec: data_check_string is every field except ``hash``,
+    sorted alphabetically, joined with newlines; secret key is
+    HMAC-SHA256(key="WebAppData", msg=bot_token).
+    V3.43.0: the age window comes from config (7 days) — the strict 24h
+    default locked users out when the client reopened the Mini App from its
+    recents list with the previous initData.
+    """
+    token = bot_token or TELEGRAM_TOKEN
+    if max_age_seconds is None:
+        max_age_seconds = WEBAPP_INIT_DATA_MAX_AGE
+    if not init_data or not token:
+        return None
+    try:
+        pairs = dict(parse_qsl(init_data, keep_blank_values=True))
+    except Exception:
+        return None
+    received_hash = pairs.pop('hash', '')
+    if not received_hash:
+        return None
+    check_string = '\n'.join(f'{k}={v}' for k, v in sorted(pairs.items()))
+    secret_key = hmac.new(b'WebAppData', token.encode(), hashlib.sha256).digest()
+    calculated = hmac.new(secret_key, check_string.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(calculated, received_hash):
+        return None
+    try:
+        auth_age = time.time() - int(pairs.get('auth_date', '0') or 0)
+    except ValueError:
+        return None
+    if max_age_seconds and auth_age > max_age_seconds:
+        return None
+    return pairs
+
+
+def init_data_user(pairs: dict) -> dict:
+    """The ``user`` JSON object from validated initData ({} if absent)."""
+    try:
+        return json.loads(pairs.get('user', '{}')) or {}
+    except (TypeError, ValueError):
+        return {}
+
+
+def _user_row(telegram_id: int) -> User | None:
+    with SessionLocal() as session:
+        return session.scalar(select(User).where(User.telegram_id == str(telegram_id)))
+
+
+def _trial_eligible(telegram_id: int) -> bool:
+    try:
+        from services.payments import trial_eligible
+        return trial_eligible(telegram_id)
+    except Exception:
+        return False
+
+
+def api_me(telegram_id: int) -> dict:
+    """Profile tab payload — mirrors what the bot already knows about the user."""
+    lang = user_lang(telegram_id)
+    user = _user_row(telegram_id)
+    selected_character = (user.selected_character or CHARACTER_ID) if user else CHARACTER_ID
+    level = 1
+    try:
+        from services.photo_service import get_relationship_level
+        level = get_relationship_level(telegram_id, selected_character)
+    except Exception:
+        pass
+    card = get_card(selected_character)
+    return {
+        'id': telegram_id,
+        'name': (user.name or '') if user else '',
+        'lang': lang,
+        'premium': is_premium(telegram_id),
+        # V3.88.0: the 99 ₽ / 3-day first-purchase trial is on offer
+        'trial_eligible': _trial_eligible(telegram_id),
+        # V3.51.1: the owner's Mini App sees the admin generation feed only
+        # when this is true (the server re-checks on every admin API call).
+        'admin': _is_admin(telegram_id),
+        'streak': (user.streak_count or 0) if user else 0,
+        'photo_credits': (user.photo_credits or 0) if user else 0,
+        # V3.43.5: the in-app Settings toggle shows the live flag (Premium is
+        # already in this payload — enabling re-checks it server-side).
+        'spicy_mode': bool(getattr(user, 'spicy_mode', False)) if user else False,
+        # V3.55.5: daily streak gift state for the shop block (replaces the
+        # V3.44.0 bonus wheel). Read-only — claiming is a POST.
+        **_gift_me_fields(telegram_id),
+        'selected_character': {
+            'id': selected_character,
+            'name': (card.display_name if card else selected_character),
+            'level': level,
+        },
+        # V3.44.6: author earnings from custom characters.
+        'author_earnings': _get_author_earnings(telegram_id),
+    }
+
+
+def _gift_me_fields(telegram_id: int) -> dict:
+    """V3.55.5: api_me piggy-backs the streak-gift status. Any failure simply
+    hides the block in the SPA (gift_available=False)."""
+    try:
+        from services import gift_service
+        gs = gift_service.gift_status(telegram_id)
+        return {
+            'gift_available': bool(gs.get('available')),
+            'gift_enabled': bool(gs.get('enabled')),
+            'gift_streak': int(gs.get('streak') or 0),
+            'gift_capped': bool(gs.get('capped')),
+            'gift_claimed_today': bool(gs.get('claimed_today')),
+            'gift_amount': int(gs.get('amount') or 0),
+        }
+    except Exception:
+        return {'gift_available': False, 'gift_enabled': False, 'gift_streak': 0,
+                'gift_capped': False, 'gift_claimed_today': False, 'gift_amount': 0}
+
+
+def _get_author_earnings(telegram_id: int) -> float:
+    """V3.44.6: get total author earnings for a user."""
+    try:
+        from services.custom_character_service import get_author_total_earnings
+        return get_author_total_earnings(telegram_id)
+    except Exception:
+        return 0.0
+
+
+def _mine_character_ids(telegram_id: int | None) -> set[str]:
+    """V3.44.8: ids of every custom character the caller owns.
+
+    The old check compared the card id against ``custom_character_id(telegram_id)``
+    — a fresh random UUID per call since V3.44.6, so it never matched and the
+    «mine» badge / «MY CHARACTERS» profile block was always empty.
+    """
+    if not telegram_id:
+        return set()
+    try:
+        return {c.character_id for c in get_all_custom_characters(telegram_id)}
+    except Exception:
+        logger.exception('mine ids load failed user=%s', telegram_id)
+        return set()
+
+
+def _batch_rel_levels(telegram_id: int | None, character_ids: list[str]) -> dict[str, int]:
+    """V3.44.8: relationship levels for many characters in ONE query (was N+1
+    ``get_relationship_level`` calls, each opening its own DB session)."""
+    if not telegram_id or not character_ids:
+        return {}
+    try:
+        from services.photo_service import STAGE_INDEX
+        from services.test_mode import get_stage as get_test_stage
+        from models.relationship_models import UserCharacterRelationship
+        override = get_test_stage(telegram_id)
+        if override:
+            return {cid: STAGE_INDEX.get(override, 0) + 1 for cid in character_ids}
+        with SessionLocal() as session:
+            user = session.scalar(select(User).where(User.telegram_id == str(telegram_id)))
+            if not user:
+                return {}
+            rows = session.scalars(
+                select(UserCharacterRelationship).where(
+                    UserCharacterRelationship.user_id == user.id,
+                    UserCharacterRelationship.character_id.in_(character_ids),
+                )
+            ).all()
+            # No relationship row = 'stranger' = level 1 (mirrors get_relationship_level).
+            from services.test_mode import picked_stages
+            picks = picked_stages(telegram_id)  # V3.83.0: his Premium level picks win
+            return {cid: STAGE_INDEX.get('stranger', 0) + 1 for cid in character_ids} | {
+                r.character_id: STAGE_INDEX.get(r.stage, 0) + 1 for r in rows
+            } | {cid: STAGE_INDEX.get(st, 0) + 1 for cid, st in picks.items() if cid in character_ids}
+    except Exception:
+        logger.exception('batch rel levels failed user=%s', telegram_id)
+        return {}
+
+
+def _default_marital(character_id: str, custom: bool) -> str:
+    if custom:
+        try:
+            from services.custom_character_service import custom_character_params, RELATIONSHIP_STORY
+            params, _ = custom_character_params(character_id)
+            ms = str(params.get('marital', ''))
+            if ms in RELATIONSHIP_STORY:
+                return ms
+        except Exception:
+            pass
+    return 'mar_single'
+
+
+def _batch_marital(telegram_id: int | None, character_ids: list[str]) -> dict[str, str]:
+    """V3.59.5: the user's picked relationship status per character, one query."""
+    if not telegram_id or not character_ids:
+        return {}
+    try:
+        from models.relationship_models import UserCharacterRelationship
+        with SessionLocal() as session:
+            user = session.scalar(select(User).where(User.telegram_id == str(telegram_id)))
+            if not user:
+                return {}
+            rows = session.execute(
+                select(UserCharacterRelationship.character_id, UserCharacterRelationship.marital_status).where(
+                    UserCharacterRelationship.user_id == user.id,
+                    UserCharacterRelationship.character_id.in_(character_ids),
+                )
+            ).all()
+            return {cid: ms for cid, ms in rows if ms}
+    except Exception:
+        logger.exception('batch marital failed user=%s', telegram_id)
+        return {}
+
+
+def _batch_path_axis(telegram_id: int | None, character_ids: list[str]) -> dict[str, float]:
+    """V3.50.0: the per-character relationship *path* (-100 romance .. +100
+    bold) for the character-card indicator, in ONE query. Characters without
+    a relationship row simply have no key (the app hides the bar)."""
+    if not telegram_id or not character_ids:
+        return {}
+    try:
+        from models.relationship_models import UserCharacterRelationship
+        with SessionLocal() as session:
+            user = session.scalar(select(User).where(User.telegram_id == str(telegram_id)))
+            if not user:
+                return {}
+            rows = session.scalars(
+                select(UserCharacterRelationship).where(
+                    UserCharacterRelationship.user_id == user.id,
+                    UserCharacterRelationship.character_id.in_(character_ids),
+                )
+            ).all()
+            return {r.character_id: float(getattr(r, 'path_axis', 0.0) or 0.0) for r in rows}
+    except Exception:
+        logger.exception('batch path axis failed user=%s', telegram_id)
+        return {}
+
+
+def _author_brief(character_id: str) -> dict | None:
+    """V3.44.8: public author info for a custom character card."""
+    try:
+        row = get_custom_character_by_id(character_id)
+        if not row or not row.author_telegram_id:
+            return None
+        name = None
+        with SessionLocal() as session:
+            author = session.scalar(select(User).where(User.telegram_id == str(row.author_telegram_id)))
+            if author:
+                name = author.name or (f'@{author.username}' if author.username else None)
+        return {'id': str(row.author_telegram_id), 'name': name or 'Автор'}
+    except Exception:
+        logger.exception('author brief failed char=%s', character_id)
+        return None
+
+
+def _batch_tags(character_ids: list[str]) -> dict[str, str]:
+    """V3.45.28: {character_id: raw tags} for the storefront grid in one query.
+
+    Only custom personas carry tags, so the caller filters the id list first;
+    an empty list short-circuits without touching the DB.
+    """
+    if not character_ids:
+        return {}
+    from models.app_models import CustomCharacter
+    out: dict[str, str] = {}
+    try:
+        with SessionLocal() as session:
+            rows = session.scalars(
+                select(CustomCharacter).where(CustomCharacter.character_id.in_(character_ids))
+            ).all()
+            for r in rows:
+                if r.tags:
+                    out[r.character_id] = r.tags
+    except Exception:
+        logger.exception('batch tags read failed')
+        return {}
+    return out
+
+
+def api_characters(telegram_id: int | None = None) -> list[dict]:
+    """Storefront grid: every visible card plus its storefront photo URL.
+
+    V3.35.0: constructor personas are public — they were always registered as
+    visible ``active`` cards, and now the grid also marks which cards are
+    user-made (``custom``) and which one is the caller's own creation
+    (``mine``), so the app can offer «create your own» and chat entry.
+    V3.43.9: includes relationship level per character for the progress bar.
+    V3.44.8: ``mine`` comes from the DB (was a never-matching UUID comparison);
+    the author also sees their own not-community-published cards (``private``);
+    relationship levels load in one batched query.
+    """
+    selected = None
+    if telegram_id:
+        user = _user_row(telegram_id)
+        selected = (user.selected_character or CHARACTER_ID) if user else None
+    views = character_views_map()
+    # V3.44.8: the caller's own character ids (mine badge + private cards).
+    mine_ids = _mine_character_ids(telegram_id)
+    cards = list_cards(visible_only=True)
+    # V3.76.0: a scenario-card girl joins his storefront once her card came
+    # (admins see everyone; his current girl never disappears).
+    try:
+        from services import scenario_cards
+        if not _is_admin(telegram_id):
+            cards = [c for c in cards if c.character_id == selected or (
+                telegram_id and scenario_cards.unlocked(telegram_id, c.character_id))
+                or c.character_id not in scenario_cards.SCENARIO_GIRLS]
+    except Exception:
+        pass
+    # V3.44.8: the author always sees their own not-community-published cards
+    # too — previously a «community_no» persona vanished from her owner's app.
+    if mine_ids:
+        visible_ids = {c.character_id for c in cards}
+        for extra in list_cards(visible_only=False):
+            if extra.character_id in mine_ids and extra.character_id not in visible_ids:
+                cards.append(extra)
+    # V3.43.9: relationship levels for the progress bar (batched, one query).
+    rel_levels = _batch_rel_levels(telegram_id, [c.character_id for c in cards])
+    # V3.45.28: one batched read of the free-text tags for every custom card
+    # present, so the storefront can render chips + power the community filter
+    # without a per-card query.
+    tags_by_id = _batch_tags([c.character_id for c in cards if is_custom_character(c.character_id)])
+    # V3.50.0: batched read of the romance<->bold path for the card indicator.
+    path_axes = _batch_path_axis(telegram_id, [c.character_id for c in cards])
+    maritals = _batch_marital(telegram_id, [c.character_id for c in cards])
+    # V3.92.0: «🔥 Девушка дня» — open to everyone today, pinned first.
+    try:
+        from services import girl_of_day
+        gday = girl_of_day.current()
+    except Exception:
+        gday = None
+    out = []
+    for card in cards:
+        custom = is_custom_character(card.character_id)
+        mine = card.character_id in mine_ids
+        # V3.43.2: cache-buster so a re-rendered tile reaches the grid at
+        # once instead of sitting in the WebView cache for an hour.
+        ver = asset_version(card.character_id)
+        # V3.43.3: the admin-uploaded storefront media (photo/gif/mp4).
+        ov = character_card_override(card.character_id)
+        ov_ext = ov.suffix.lower() if ov else ''
+        out.append({
+            'id': card.character_id,
+            'name': card.display_name,
+            'age': card.age,
+            'bio': card.short_bio or '',
+            # V3.38.0: the Come Closer story-hook line under the name ("мать
+            # твоего друга", "подруга детства приехала в твой город").
+            'hook': get_scenario_hook(card.character_id) or '',
+            'status': card.status,
+            'emoji': card.button_emoji or '',
+            'photo': f"/webapp/photo/{card.character_id}?v={ver}",
+            # V3.43.3: the grid card is a PLAIN static photo (owner: «сделай
+            # просто фото») — the look shot, not the Ken-Burns webp anymore.
+            # An admin-uploaded override wins: jpg/png/webp/gif ride <img>
+            # (animated formats loop by themselves), mp4 rides <video>.
+            'card': (f'/webapp/card/{card.character_id}?v={ver}'
+                     if ov_ext in ('.jpg', '.png', '.webp', '.gif')
+                     else f"/webapp/photo/{card.character_id}?i=1&v={ver}"),
+            'live': (f'/webapp/card/{card.character_id}?v={ver}'
+                     if ov_ext == '.mp4' else None),
+            # V3.40.0: the « 427k» view badge on the card corner.
+            'views': views.get(card.character_id, 0),
+            'girl_of_day': card.character_id == gday,
+            # V3.39.0: the Come Closer character page opens with a photo strip
+            # (face + look references), so the card page needs every shot.
+            # V3.47.4: admin-set carousel visuals win — pure storefront art
+            # that never touches the canonical references behind generation.
+            'gallery': (
+                [f'/webapp/pgal/{card.character_id}/{sh["id"]}'
+                 for sh in page_gallery_shots(card.character_id)]
+                or [
+                    f'/webapp/photo/{card.character_id}?i={idx}&v={ver}'
+                    for idx in range(min(4, len(character_gallery(card.character_id))))
+                ]
+            ),
+            'selected': card.character_id == selected,
+            'custom': custom,
+            'mine': mine,
+            # V3.44.8: own not-community-published card — visible only to its author.
+            'private': mine and not card.is_visible,
+            # V3.44.8: public author info so the app can link the author page.
+            'author': _author_brief(card.character_id) if custom else None,
+            # V3.43.9: relationship level (0-8) for the progress bar.
+            'level': rel_levels.get(card.character_id, 0),
+            # V3.50.0: relationship path (-100 tenderness .. +100 passion);
+            # None until a relationship row exists for this character.
+            'path': path_axes.get(card.character_id),
+            # V3.59.5: her relationship status for this user. V3.59.6: falls back
+            # to the constructor's pick for a custom girl, else «свободна».
+            'marital': maritals.get(card.character_id) or _default_marital(card.character_id, custom),
+            'marital_price': MARITAL_CHANGE_PEACHES,
+            # V3.45.28: sanitized tags for custom personas ([] for built-ins).
+            'tags': parse_tags(tags_by_id.get(card.character_id)),
+        })
+    return out
+
+
+def api_invoice_products(lang: str = 'ru') -> list[dict]:
+    """Products the Mini App sells directly with Stars (V3.34.0).
+
+    ``payload`` is the exact string the bot's ``pre_checkout_query`` /
+    ``successful_payment`` handlers already validate, so a payment started
+    from the app lands in the very same granting code path as a chat payment:
+
+    - ``premium_month`` — handled since forever: +30 days Premium, +12 credits;
+    - ``premium_week`` — V3.34.1 addition: +7 days Premium, +3 credits;
+    - ``peach_pack_*`` — V3.43.1: the peach pack ladder (10/30/100 credits)
+      that replaced the standalone +1 photo credit square.
+    """
+    en = lang == EN
+    from services import vip_offer
+    return _with_price_usd([
+        # V3.97.0: the one-time −50% month for the most active users. Always in
+        # the catalogue; the app shows it only when the limit answer says
+        # vip:true, and the invoice routes re-check the window.
+        {
+            'id': 'premium_vip',
+            'emoji': '💝',
+            'title': (f'Premium · 30 дней −{vip_offer.VIP_PERCENT}% — только для тебя' if not en
+                      else f'Premium · 30 days −{vip_offer.VIP_PERCENT}% — just for you'),
+            'description': ('ты пишешь мне чаще всех — поэтому месяц без лимитов за полцены, один раз'
+                            if not en else
+                            'you write to me more than anyone — so a month with no limits at half price, once'),
+            'badge': ('−%d%%' % vip_offer.VIP_PERCENT),
+            'gift': 0,
+            'days': 30,
+            'stars': vip_offer.VIP_STARS,
+            'payload': vip_offer.PRODUCT,
+            'rub': vip_offer.VIP_RUB if PLATEGA_ENABLED else None,
+            'usd': None,
+            'vip': True,
+        },
+        # V3.88.0: the first-purchase trial (the app shows it only while
+        # /webapp/api/me says trial_eligible; the invoice routes re-check).
+        {
+            'id': 'premium_trial',
+            'emoji': '🔥',
+            'title': (f'Premium · {PREMIUM_TRIAL_DAYS} дня — попробовать' if not en
+                      else f'Premium · {PREMIUM_TRIAL_DAYS} days trial'),
+            'description': (
+                'всё откровенное открыто: фото в белье и без, «Раздеть», «Наедине», голос, без лимита'
+                if not en else
+                'everything explicit unlocked: lingerie & nude photos, «Undress», private shots, voice, unlimited'
+            ),
+            'tagline': ('разовая цена для первой покупки' if not en else 'one-time first-purchase price'),
+            'badge': ('пробный' if not en else 'trial'),
+            'gift': 0,
+            'days': PREMIUM_TRIAL_DAYS,
+            'stars': PREMIUM_TRIAL_STARS,
+            'payload': 'premium_trial',
+            'rub': PLATEGA_PREMIUM_TRIAL_PRICE_RUB if PLATEGA_ENABLED else None,
+            'usd': PREMIUM_TRIAL_PRICE_USD,
+            'trial': True,
+        },
+        {
+            'id': 'premium',
+            'emoji': '⭐',
+            'title': 'Premium · 30 дней' if not en else 'Premium · 30 days',
+            'description': (
+                f'она больше не засыпает: общение без лимита, {PREMIUM_MONTHLY_PHOTO_CREDITS} 🍑 в подарок, голос и все девушки'
+                if not en else
+                f'she never falls asleep: unlimited chat, {PREMIUM_MONTHLY_PHOTO_CREDITS} 🍑 as a gift, voice and every girl'
+            ),
+            # V3.66.0: one short line for the shop card (the long description
+            # stays for the quick-buy sheet).
+            'tagline': (f'+{peach_num(PREMIUM_MONTHLY_PHOTO_CREDITS)} 🍑 в подарок' if not en
+                        else f'+{peach_num(PREMIUM_MONTHLY_PHOTO_CREDITS)} 🍑 as a gift'),
+            'gift': PREMIUM_MONTHLY_PHOTO_CREDITS,
+            'days': 30,
+            'stars': PREMIUM_MONTHLY_STARS,
+            'payload': 'premium_month',
+            'rub': PLATEGA_PREMIUM_PRICE_RUB if PLATEGA_ENABLED else None,
+            'usd': PREMIUM_PRICE_USD,
+        },
+        {
+            'id': 'premium_week',
+            'emoji': '⭐',
+            'title': 'Premium · 7 дней' if not en else 'Premium · 7 days',
+            'description': (
+                f'попробовать неделю: общение без лимита, {PREMIUM_WEEKLY_PHOTO_CREDITS} 🍑 в подарок и её голос'
+                if not en else
+                f'try it for a week: unlimited chat, {PREMIUM_WEEKLY_PHOTO_CREDITS} 🍑 as a gift and her voice'
+            ),
+            'tagline': (f'+{peach_num(PREMIUM_WEEKLY_PHOTO_CREDITS)} 🍑 в подарок' if not en
+                        else f'+{peach_num(PREMIUM_WEEKLY_PHOTO_CREDITS)} 🍑 as a gift'),
+            'gift': PREMIUM_WEEKLY_PHOTO_CREDITS,
+            'stars': PREMIUM_WEEKLY_STARS,
+            'payload': 'premium_week',
+            'rub': PLATEGA_PREMIUM_WEEKLY_PRICE_RUB if PLATEGA_ENABLED else None,
+            'usd': PREMIUM_WEEKLY_PRICE_USD,
+            'days': 7,
+        },
+        # V3.67.0: the 3-month plan the bot already sells (buy:premium_quarter)
+        # is a radio row in the app's Premium card too.
+        {
+            'id': 'premium_quarter',
+            'emoji': '⭐',
+            'title': 'Premium · 3 месяца' if not en else 'Premium · 3 months',
+            'description': (
+                f'три месяца без лимита, {peach_num(PREMIUM_QUARTERLY_PHOTO_CREDITS)} 🍑 в подарок, голос и все девушки'
+                if not en else
+                f'three months unlimited, {peach_num(PREMIUM_QUARTERLY_PHOTO_CREDITS)} 🍑 as a gift, voice and every girl'
+            ),
+            'tagline': (f'+{peach_num(PREMIUM_QUARTERLY_PHOTO_CREDITS)} 🍑 в подарок' if not en
+                        else f'+{peach_num(PREMIUM_QUARTERLY_PHOTO_CREDITS)} 🍑 as a gift'),
+            'gift': PREMIUM_QUARTERLY_PHOTO_CREDITS,
+            'stars': PREMIUM_QUARTERLY_STARS,
+            'payload': 'premium_quarter',
+            'rub': PLATEGA_PREMIUM_QUARTERLY_PRICE_RUB if PLATEGA_ENABLED else None,
+            'usd': None,
+            'days': 90,
+        },
+        # V3.65.0: ×100 packs; the bulk discount reads as «+N в подарок».
+        _peach_pack_item('peach_pack_10', PEACH_PACK_10_STARS, PEACH_PACK_10_RUB, en),
+        _peach_pack_item('peach_pack_30', PEACH_PACK_30_STARS, PEACH_PACK_30_RUB, en),
+        _peach_pack_item('peach_pack_100', PEACH_PACK_100_STARS, PEACH_PACK_100_RUB, en),
+        # V3.44.23: the custom-peach tile — the user types how many peaches
+        # they want; the Stars and rub prices are computed per unit.
+        {
+            'id': 'peach_custom',
+            'emoji': '🍑',
+            'title': 'Своё количество' if not en else 'Custom amount',
+            'description': (
+                f'укажи сколько персиков нужно (кратно {PEACH_CUSTOM_UNIT}) — цена как в малом паке'
+                if not en else
+                f'type how many peaches you need (in steps of {PEACH_CUSTOM_UNIT}) — same rate as the small pack'
+            ),
+            # V3.65.0: prices are per unit of PEACH_CUSTOM_UNIT peaches.
+            'stars': PEACH_CUSTOM_STARS_PER_UNIT,
+            'payload': 'peach_custom',
+            'rub': PEACH_CUSTOM_RUB_PER_UNIT if PLATEGA_ENABLED else None,
+            'usd': None,
+            'custom': True,
+            'unit': PEACH_CUSTOM_UNIT,
+        },
+    ])
+
+
+def peach_num(n: int) -> str:
+    """V3.65.0: 10000 → «10 000» (no-break space) for the big peach figures."""
+    return f'{int(n):,}'.replace(',', '\u00a0')
+
+
+def _peach_pack_item(key: str, stars: int, rub: int, en: bool) -> dict:
+    """V3.65.0: one shop tile of the peach pack ladder."""
+    credits = PEACH_PACK_CREDITS[key]
+    bonus = PEACH_PACK_BONUS.get(key, 0)
+    photos = credits // max(1, CHAT_PHOTO_PEACH_COST)
+    undress = credits // max(1, UNDRESS_PEACH_COST)
+    if bonus:
+        desc = (f'{peach_num(credits - bonus)} + {peach_num(bonus)} в подарок · {photos} фото от неё в чате'
+                if not en else
+                f'{peach_num(credits - bonus)} + {peach_num(bonus)} as a gift · {photos} photos from her in chat')
+    else:
+        desc = (f'{photos} фото от неё в чате или {undress} раз «Раздеть» (с Premium)'
+                if not en else
+                f'{photos} photos from her in chat or {undress}× «Undress» (with Premium)')
+    item = {
+        'id': key,
+        'emoji': '🍑',
+        'title': f'{peach_num(credits)} персиков' if not en else f'{peach_num(credits)} peaches',
+        'description': desc,
+        'stars': stars,
+        'payload': key,
+        'rub': rub if PLATEGA_ENABLED else None,
+        'usd': None,
+        'credits': credits,
+        # V3.66.0: the shop tile shows only this — «≈ 15 фото».
+        'tagline': f'≈ {photos} фото' if not en else f'≈ {photos} photos',
+        'bonus': bonus,
+    }
+    if bonus:
+        item['badge'] = f'+{peach_num(bonus)} 🎁'
+    return item
+
+
+def _with_price_usd(products: list[dict]) -> list[dict]:
+    """V3.62.12: the app shows money, not Stars — every product carries a
+    ruble and a dollar price (explicit, else the Stars ladder, else ~$0.02 per Star)."""
+    for x in products:
+        # card/SBP price when Platega sells it, else the Stars ladder in rubles.
+        x['price_rub'] = x.get('rub') or fiat_values(x['stars'])[0] or x['stars'] * 2
+        if not x.get('usd'):
+            ladder = fiat_values(x['stars'])[1]
+            x['price_usd'] = ladder if ladder else round(x['stars'] * 0.02, 2)
+        else:
+            x['price_usd'] = x['usd']
+    return products
+
+
+def api_shop(lang: str = 'ru') -> dict:
+    """Structured prices for the shop tab (same constants the bot charges)."""
+    en = lang == EN
+    features = [
+        # V3.87.0: the 18+ content is Premium-only — lead with it.
+        ('🔥', 'откровенные фото: в белье, обнажённые, «Раздеть», «Наедине», 18+ картинки',
+         'explicit photos: lingerie, nude, «Undress», private shots, 18+ pictures'),
+        # V3.83.0: owner — «с Premium можно выбрать любой уровень общения».
+        ('🎚', 'любой уровень общения 1–10 с каждой девушкой — выбери сам', 'any relationship level 1–10 with every girl — your pick'),
+        # V3.93.0: without Premium — one ready photo a day; with it — two new ones + peaches.
+        ('📸', '2 новых фото в чате каждый день, дальше — за персики', '2 new chat photos every day, more for peaches'),
+        ('🍑', f'{PREMIUM_MONTHLY_PHOTO_CREDITS} 🍑 каждый месяц в подарок', f'{PREMIUM_MONTHLY_PHOTO_CREDITS} 🍑 every month as a gift'),
+        ('🎬', '2 бесплатных видео-оживления в день', '2 free photo animations per day'),
+        ('🎯', 'перезапуски историй и все персонажи', 'story replays and all characters'),
+        ('💌', 'безлимитное общение — она не засыпает, и больше памяти', 'unlimited chat — she never falls asleep, more memory'),
+        ('🎙', 'голосовые ответы', 'voice replies'),
+    ]
+    # V3.70.0: owner — «сделай всё в персиках»: the price list shows what the
+    # app really charges in peaches (×100 economy), not the bot's Stars ladder.
+    from config import (PRIVATE_PHOTO_PEACH_COST, COSPLAY_PHOTO_PEACH_COST,
+                        UNDRESS_PEACH_COST, CIRCLE_PEACH_COST, HOT_CIRCLE_PEACH_COST)
+    items = [
+        ('📸', 'Фото в чате' if not en else 'Chat photo', CHAT_PHOTO_PEACH_COST),
+        ('🔒', 'Фото «Наедине» (с Premium)' if not en else 'Private photo (Premium)', PRIVATE_PHOTO_PEACH_COST),
+        ('🎭', 'Косплей' if not en else 'Cosplay photo', COSPLAY_PHOTO_PEACH_COST),
+        ('🔥', 'Раздеть фото (с Premium)' if not en else 'Undress a photo (Premium)', UNDRESS_PEACH_COST),
+        ('🎥', 'Кружочек' if not en else 'Video circle', CIRCLE_PEACH_COST),
+        ('🤫', 'Тайное видео (с Premium)' if not en else 'Secret video (Premium)', HOT_CIRCLE_PEACH_COST),
+        ('🔥', 'Горячий кружок (с Premium)' if not en else 'Hot video circle (Premium)', HOT_CIRCLE_PEACH_COST),
+        ('🎨', 'Картинка в студии' if not en else 'Studio picture', WEBAPP_PICTURE_COST_CREDITS),
+        ('🎬', 'Видео в студии' if not en else 'Studio video', WEBAPP_VIDEO_COST_CREDITS),
+        # V3.44.22: public personas are free, private ones cost peaches.
+        ('👩', 'Создание персонажа' if not en else 'Character creation', 0),
+    ]
+    return {
+        'premium': {
+            'stars': PREMIUM_MONTHLY_STARS,
+            'rub': PLATEGA_PREMIUM_PRICE_RUB if PLATEGA_ENABLED else None,
+            'usd': PREMIUM_PRICE_USD,
+            'photo_credits': PREMIUM_MONTHLY_PHOTO_CREDITS,
+            'free_videos_daily': VIDEO_PREMIUM_FREE_DAILY,
+            'features': [
+                {'emoji': e, 'ru': ru, 'en': en_text} for e, ru, en_text in features
+            ],
+        },
+        'free_tier': {
+            'messages_per_day': FREE_MESSAGES_PER_DAY,
+            'messages_per_day_later': min(FREE_MESSAGES_PER_DAY, FREE_MESSAGES_PER_DAY_LATE),
+            'later_from_day': FREE_LATE_FROM_DAY,
+            'photos_level_1_2': FREE_PHOTOS_LEVEL_1_2,
+            'photos_level_3_6': FREE_PHOTOS_LEVEL_3_6,
+        },
+        # V3.36.0: each item carries the rub + dollar equivalent of its Stars
+        # price (the same ladder the bot shows next to its buttons); explicit
+        # per-item fiat (the constructor) wins over the ladder.
+        'items': [
+            {'emoji': e, 'name': n, 'peaches': p, 'stars': 0}
+            for e, n, p in items
+        ],
+        'constructor_rub': CONSTRUCTOR_COST_RUB if PLATEGA_ENABLED else None,
+        'constructor_usd': CONSTRUCTOR_PRICE_USD,
+        # V3.66.0: one chat photo in peaches — the shop's «фото = 200 🍑» hint.
+        'photo_peaches': CHAT_PHOTO_PEACH_COST,
+        # V3.44.22: private-persona price in peaches (public ones are free).
+        'constructor_peaches': CONSTRUCTOR_COST_PEACHES,
+        # V3.43.0: the pay-method modal only offers rows the backend can sell —
+        # Platega (card/SBP) and Wallet Pay (crypto) are env-gated.
+        'platega': PLATEGA_ENABLED,
+        'wallet_pay': WALLET_PAY_ENABLED,
+        # V3.34.0: what the Mini App can sell right now (Stars invoices via
+        # tg.openInvoice) — the rest of the price list stays informational.
+        'purchases': api_invoice_products(lang),
+    }
+
+
+def api_constructor_steps(lang: str = 'ru', *, admin: bool = False) -> list[dict]:
+    """V3.35.0: the app wizard's steps — the same CONSTRUCTOR_STEPS the bot's
+    inline constructor walks, labeled per language. V3.64.6: the look-alike
+    photo upload step is shown to admins only."""
+    en = lang == EN
+    out = []
+    for step in CONSTRUCTOR_STEPS:
+        if step.get('photo_upload') and not admin:
+            continue
+        title = STEP_TITLES_EN.get(step['key'], step['title']) if en else step['title']
+        options = [
+            {'value': value, 'label': (OPTION_LABELS_EN.get(value, label) if en else label)}
+            for value, label, _ in step['options']
+        ]
+        # V3.44.4: pass free_text flag so the app renders a textarea + skip button.
+        # V3.44.5: pass photo_upload flag so the app renders a photo upload button.
+        out.append({
+            'key': step['key'], 'title': title, 'options': options,
+            'free_text': bool(step.get('free_text')),
+            'photo_upload': bool(step.get('photo_upload')),
+            # V3.45.28: which visual group this field belongs to on the
+            # one-screen wizard (appearance / character / story / share).
+            'group': STEP_GROUPS.get(step['key'], 'other'),
+        })
+    return out
+
+
+def api_chat_history(db_user_id: int, character_id: str, limit: int = 30) -> list[dict]:
+    """V3.35.0: recent dialog rows for the Mini App chat view (oldest first).
+
+    Same ``messages`` table the bot chat writes to — the app and the bot share
+    one continuous dialog per (user, character).
+    """
+    limit = max(1, min(60, int(limit or 30)))
+    try:
+        from services.memory_service import get_recent_messages
+        rows = get_recent_messages(db_user_id, character_id, limit)
+    except Exception:
+        return []
+    out = []
+    for m in rows:
+        try:
+            ts = m.created_at.isoformat() if m.created_at else None
+        except Exception:
+            ts = None
+        out.append({'role': m.role, 'content': m.content, 'ts': ts,
+                    # V3.39.0: media messages (photo / circle / voice) travel
+                    # with the history so the app renders them like the bot.
+                    'media_kind': getattr(m, 'media_kind', None),
+                    'media_url': getattr(m, 'media_url', None)})
+    return out
+
+
+def api_chat_list(db_user_id: int, telegram_id: int | None = None) -> list[dict]:
+    """V3.38.0: the «Чаты» tab — one row per character the user has any
+    messages with, newest activity first, carrying the storefront card data
+    (photo, status) so a tap can open the shared in-app chat view.
+    V3.44.8: cards batch-load in the same session (was N+1 get_card calls) and
+    «mine» comes from the DB instead of a never-matching UUID comparison."""
+    try:
+        with SessionLocal() as session:
+            rows = session.scalars(
+                select(Message)
+                .where(Message.user_id == int(db_user_id))
+                .order_by(Message.created_at.desc())
+                .limit(400)
+            ).all()
+            # V3.44.8: batch-load every card in one query (was N+1 get_card).
+            card_map = {c.character_id: c for c in session.query(CharacterCard).all()} if rows else {}
+    except Exception:
+        return []
+    seen: dict[str, Message] = {}
+    for m in rows:
+        if m.character_id not in seen:
+            seen[m.character_id] = m
+    # V3.52.0: unread = how many messages she wrote after the user's last turn OR
+    # after they last opened the chat (whichever is later). So a conversational
+    # reply the user already saw never counts as new, but a later proactive / life
+    # moment does. Legacy assistant-only chats (never opened) surface a single
+    # «new» so a fresh «she wrote you» is visible without flooding old history.
+    from datetime import datetime as _dt
+    read_map = _chat_reads_map(telegram_id) if telegram_id else {}
+    last_user_ts: dict[str, object] = {}
+    for m in rows:
+        if m.role == 'user' and m.character_id not in last_user_ts:
+            last_user_ts[m.character_id] = m.created_at
+    unread_counts: dict[str, int] = {}
+    for m in rows:
+        if m.role != 'assistant':
+            continue
+        anchor = last_user_ts.get(m.character_id)
+        read_ts = None
+        raw = read_map.get(m.character_id)
+        if raw:
+            try:
+                read_ts = _dt.fromisoformat(str(raw))
+            except Exception:
+                read_ts = None
+        thresholds = [t for t in (anchor, read_ts) if t]
+        if not thresholds:
+            if unread_counts.get(m.character_id, 0) < 1:
+                unread_counts[m.character_id] = 1
+            continue
+        thr = max(thresholds)
+        if m.created_at and m.created_at > thr:
+            unread_counts[m.character_id] = unread_counts.get(m.character_id, 0) + 1
+    mine_ids = _mine_character_ids(telegram_id)
+    out = []
+    for character_id, last in seen.items():
+        card = card_map.get(character_id)
+        custom = is_custom_character(character_id)
+        try:
+            ts = last.created_at.isoformat() if last.created_at else None
+        except Exception:
+            ts = None
+        out.append({
+            'id': character_id,
+            'name': card.display_name if card else (character_id if not custom else '—'),
+            'photo': f"/webapp/photo/{character_id}?v={asset_version(character_id)}",
+            'emoji': (card.button_emoji if card else None) or '👩',
+            'status': card.status if card else ('active' if custom else 'soon'),
+            'custom': custom,
+            'mine': character_id in mine_ids,
+            'selected': False,
+            'last_message': (last.content or '')[:140],
+            'last_role': last.role,
+            'last_ts': ts,
+            'unread': int(unread_counts.get(character_id, 0) or 0),
+        })
+    return out[:50]
+
+
+def api_author(author_telegram_id: str) -> dict:
+    """V3.44.8: public author page — profile plus every community-visible
+    character they created, so other users can browse one author's girls."""
+    author_id = str(author_telegram_id or '').strip()
+    if not author_id:
+        return {'ok': False, 'error': 'bad_request'}
+    name = None
+    try:
+        with SessionLocal() as session:
+            author = session.scalar(select(User).where(User.telegram_id == author_id))
+            if author:
+                name = author.name or (f'@{author.username}' if author.username else None)
+    except Exception:
+        logger.exception('author lookup failed author=%s', author_id)
+    characters = []
+    try:
+        visible = {c.character_id for c in list_cards(visible_only=True)}
+        views = character_views_map()
+        for row in get_author_characters(author_id):
+            if row.character_id not in visible:
+                continue
+            card = get_card(row.character_id)
+            if not card:
+                continue
+            ver = asset_version(card.character_id)
+            characters.append({
+                'id': card.character_id,
+                'name': card.display_name,
+                'age': card.age,
+                'bio': card.short_bio or '',
+                'photo': f"/webapp/photo/{card.character_id}?v={ver}",
+                'views': views.get(card.character_id, 0),
+            })
+    except Exception:
+        logger.exception('author characters failed author=%s', author_id)
+    return {'ok': True, 'author': {'id': author_id, 'name': name or 'Автор'}, 'characters': characters}
+
+
+def _character_likes_map() -> dict[str, int]:
+    """V3.44.22: total like count per character id (creator cabinet summary)."""
+    try:
+        with SessionLocal() as session:
+            rows = session.execute(
+                select(CharacterLike.character_id, func.count()).group_by(CharacterLike.character_id)
+            ).all()
+            return {str(cid): int(cnt or 0) for cid, cnt in rows}
+    except Exception:
+        logger.exception('character likes map failed')
+        return {}
+
+
+def api_creator_cabinet(telegram_id: int) -> dict:
+    """V3.44.11: the creator's cabinet — every character the caller built, with
+    the generated avatar, views, likes, per-character earnings and the storefront
+    (витрина) publish state, so the author can put a girl on the storefront or
+    take her back private. V3.44.22 adds likes + summary totals."""
+    rows = get_all_custom_characters(telegram_id)
+    views = character_views_map()
+    likes = _character_likes_map()
+    earnings = get_author_earnings_by_character(telegram_id)
+    try:
+        visible = {c.character_id for c in list_cards(visible_only=True)}
+    except Exception:
+        logger.exception('cabinet visible cards failed user=%s', telegram_id)
+        visible = set()
+    characters = []
+    for row in rows:
+        try:
+            ver = asset_version(row.character_id)
+            characters.append({
+                'id': row.character_id,
+                'name': row.display_name,
+                'photo': f"/webapp/photo/{row.character_id}?v={ver}",
+                # on the витрина only when BOTH the community flag and the card
+                # visibility agree — the cabinet shows the honest state.
+                'published': bool(row.community_published) and row.character_id in visible,
+                # V3.45.28: review state so the cabinet can show «на модерации».
+                'moderation': getattr(row, 'moderation_status', 'none') or 'none',
+                'views': views.get(row.character_id, 0),
+                'likes': likes.get(str(row.character_id), 0),
+                'earnings': round(earnings.get(row.character_id, 0.0), 2),
+                'created_at': row.created_at.isoformat() if row.created_at else '',
+            })
+        except Exception:
+            logger.exception('cabinet row failed char=%s', row.character_id)
+    total = round(sum(earnings.values()), 2)
+    return {
+        'ok': True,
+        'characters': characters,
+        'total_earnings': total,
+        'total_views': sum(int(c.get('views') or 0) for c in characters),
+        'total_likes': sum(int(c.get('likes') or 0) for c in characters),
+    }
+
+
+def publish_creator_character(telegram_id: int, character_id: str, publish: bool) -> dict:
+    """V3.44.11: «на витрину» — put one of the caller's own characters on the
+    storefront (everyone in the Community segment sees her generated avatar)
+    or take her back private. Ownership is enforced against the character row.
+    V3.45.28: publishing now routes through admin moderation — a submit puts
+    her in the review queue and keeps her OFF the storefront until an admin
+    approves (the caller fires the admin ping from the async route handler)."""
+    character_id = str(character_id or '').strip()[:64]
+    if not character_id:
+        return {'ok': False, 'error': 'bad_input'}
+    row = get_custom_character_by_id(character_id)
+    if not row or str(row.telegram_id) != str(telegram_id):
+        return {'ok': False, 'error': 'not_found'}
+    if publish:
+        # V3.45.28: submitting to the витрина queues her for review, not live.
+        reviewed = request_community_review(character_id)
+        try:
+            update_card(character_id, is_visible=False)
+        except Exception:
+            logger.exception('cabinet card visibility (pending) failed char=%s', character_id)
+        return {
+            'ok': True, 'moderation': True, 'status': 'pending',
+            'name': reviewed.display_name if reviewed else row.display_name,
+        }
+    if not set_community_published(character_id, False):
+        return {'ok': False, 'error': 'not_found'}
+    set_moderation_status(character_id, 'none')
+    try:
+        update_card(character_id, is_visible=False)
+    except Exception:
+        logger.exception('cabinet card visibility failed char=%s', character_id)
+    return {'ok': True, 'published': False}
+
+
+def api_creator_character(telegram_id: int, character_id: str) -> dict:
+    """V3.45.27: fetch one of the caller's own characters for the edit form
+    (prefilled name / bio / age). Ownership is enforced against the row."""
+    character_id = str(character_id or '').strip()[:64]
+    if not character_id:
+        return {'ok': False, 'error': 'bad_input'}
+    row = get_custom_character_by_id(character_id)
+    if not row or str(row.telegram_id) != str(telegram_id):
+        return {'ok': False, 'error': 'not_found'}
+    age = ''
+    bio = row.description or ''
+    try:
+        card = get_card(character_id)
+        if card:
+            age = str(card.age) if card.age else ''
+            bio = card.short_bio or bio
+    except Exception:
+        logger.exception('cabinet edit card load failed char=%s', character_id)
+    return {
+        'ok': True,
+        'id': row.character_id,
+        'name': row.display_name or '',
+        'bio': bio,
+        'age': age,
+    }
+
+
+def edit_creator_character(
+    telegram_id: int, character_id: str,
+    *, name: str | None = None, bio: str | None = None, age: str | None = None,
+) -> dict:
+    """V3.45.27: the author edits her own character's text fields (name, bio,
+    age). Updates BOTH the storefront card and the persona row so chat and
+    vitrina stay consistent. No avatar regeneration (v1 = text only)."""
+    character_id = str(character_id or '').strip()[:64]
+    if not character_id:
+        return {'ok': False, 'error': 'bad_input'}
+    row = get_custom_character_by_id(character_id)
+    if not row or str(row.telegram_id) != str(telegram_id):
+        return {'ok': False, 'error': 'not_found'}
+    name = str(name).strip()[:48] if name is not None else ''
+    bio = str(bio).strip()[:900] if bio is not None else ''
+    if not name:
+        return {'ok': False, 'error': 'name_required'}
+    age_int: int | None = None
+    if age not in (None, ''):
+        if not str(age).isdigit() or not 18 <= int(age) <= 99:
+            return {'ok': False, 'error': 'bad_age'}
+        age_int = int(age)
+    card_changes: dict = {'display_name': name}
+    if bio:
+        card_changes['short_bio'] = bio
+    if age_int is not None:
+        card_changes['age'] = age_int
+    try:
+        update_card(character_id, **card_changes)
+    except Exception:
+        logger.exception('cabinet edit card failed char=%s', character_id)
+        return {'ok': False, 'error': 'save_failed'}
+    update_custom_character_text(character_id, display_name=name, description=bio or None)
+    return {'ok': True, 'id': character_id, 'name': name, 'bio': bio, 'age': age_int}
+
+
+def delete_creator_character(telegram_id: int, character_id: str) -> dict:
+    """V3.45.27: the author permanently removes her own character — deletes the
+    persona row and hides the storefront card so she leaves the community grid."""
+    character_id = str(character_id or '').strip()[:64]
+    if not character_id:
+        return {'ok': False, 'error': 'bad_input'}
+    row = get_custom_character_by_id(character_id)
+    if not row or str(row.telegram_id) != str(telegram_id):
+        return {'ok': False, 'error': 'not_found'}
+    try:
+        update_card(character_id, is_visible=False, status='soon')
+    except Exception:
+        logger.exception('cabinet delete hide-card failed char=%s', character_id)
+    if not delete_custom_character(character_id):
+        return {'ok': False, 'error': 'not_found'}
+    return {'ok': True, 'id': character_id}
+
+
+# ── V3.45.27: unified achievements + private gallery for the Mini App ───────
+
+def api_achievements(telegram_id: int) -> dict:
+    """The app achievements board — one merged catalog with an honest total."""
+    try:
+        from services.gamification_service import get_unified_progress
+        progress = get_unified_progress(telegram_id)
+    except Exception:
+        logger.exception('app achievements failed user=%s', telegram_id)
+        progress = {'total': 0, 'unlocked': 0, 'items': []}
+    # V3.47.1: expose the admin-uploaded art URL for any achievement that has one.
+    for it in progress.get('items', []):
+        it['badge_url'] = f"/webapp/badge/{it['key']}" if it.get('has_badge') else ''
+    return {'ok': True, **progress}
+
+
+def api_collection(telegram_id: int, character_id: str) -> dict:
+    """V3.53.0: the «Собери галерею» rolling photo-set progress for one character
+    (50 photos = a set). Returns the live bar plus any sets newly completed since
+    the last announcement. Fail-silent → {} so a hiccup never blocks the page."""
+    try:
+        from services.collection_service import gallery_set_progress, note_gallery_set
+        prog = gallery_set_progress(telegram_id, character_id)
+        prog['just_completed'] = note_gallery_set(telegram_id, character_id)
+        prog['ok'] = True
+        return prog
+    except Exception:
+        logger.exception('app collection failed user=%s', telegram_id)
+        return {}
+
+
+# V3.46.0: the missions funnel CTA. The roadmap is shared with the bot /missions
+# screen, but a Mini App button must call something that already exists in the
+# SPA — so each bot callback maps onto a real in-app action (never a new route).
+_MISSION_APP_ACTION = {
+    'constructor:start': 'construct',
+    'video:animate_last': 'shop',
+    'spicy:menu': 'shop',
+    'photo_menu:open': 'shop',
+}
+
+
+def api_missions(telegram_id: int) -> dict:
+    """V3.46.0: the missions roadmap for the Mini App — the same data the bot
+    shows, with each still-locked actionable mission carrying a `cta` action the
+    SPA can route to an existing function (openWizard / shop / creator cabinet)."""
+    try:
+        from services.gamification_service import get_missions
+        data = get_missions(telegram_id)
+    except Exception:
+        logger.exception('app missions failed user=%s', telegram_id)
+        return {'ok': True, 'total': 0, 'unlocked': 0, 'pct': 0, 'items': []}
+    for it in data.get('items', []):
+        it['cta'] = _MISSION_APP_ACTION.get(it.get('cta_cb') or '', '')
+    return {'ok': True, **data}
+
+
+def api_gallery(telegram_id: int, limit: int = 60) -> dict:
+    """The app gallery of the caller's «Наедине» photos (newest first). Images
+    are served by id through /webapp/gallery/image/{id}."""
+    from services.private_photo_service import gallery_list
+    items = []
+    for row in gallery_list(telegram_id, limit=limit):
+        created = row.get('created_at')
+        items.append({
+            'id': row['id'],
+            'category': row.get('category'),
+            'type_id': row.get('type_id'),
+            'url': f"/webapp/gallery/image/{row['id']}",
+            'share_url': f"/webapp/gallery/share/{row['id']}",
+            'created_at': created.isoformat() if created else '',
+        })
+    return {'ok': True, 'count': len(items), 'items': items}
+
+
+def gallery_image_bytes(telegram_id: int, image_id: int) -> bytes | None:
+    """Return one gallery photo's bytes, but only when it belongs to the caller."""
+    from models.app_models import PrivateGallery
+    from services.private_photo_service import ensure_user
+    uid = ensure_user(telegram_id)
+    with SessionLocal() as session:
+        row = session.get(PrivateGallery, image_id)
+        if not row or row.user_id != uid:
+            return None
+        return row.image_bytes
+
+
+def share_image_bytes(telegram_id: int, image_id: int) -> bytes | None:
+    """V3.47.0: the watermarked EXPORT copy of a gallery photo for viral
+    sharing. Owner-only (reuses gallery_image_bytes), and the watermark is
+    burned in here — the in-app view and the paid download stay clean."""
+    raw = gallery_image_bytes(telegram_id, image_id)
+    if not raw:
+        return None
+    try:
+        from services.watermark_service import apply_share_watermark
+        from config import BOT_USERNAME
+        return apply_share_watermark(raw, BOT_USERNAME, telegram_id)
+    except Exception:
+        logger.exception('share watermark failed user=%s image=%s', telegram_id, image_id)
+        return raw
+
+
+# ── V3.38.0: «Картинки» studio persistence ────────────────────────────────
+
+def _picture_folder(telegram_id: int) -> Path:
+    return APP_PICTURES_DIR / str(int(telegram_id))
+
+
+def save_picture(telegram_id: int, filename: str, prompt: str) -> None:
+    """Append the new picture to the user's meta.json index (newest last)."""
+    folder = _picture_folder(telegram_id)
+    folder.mkdir(parents=True, exist_ok=True)
+    meta = folder / 'meta.json'
+    try:
+        items = json.loads(meta.read_text(encoding='utf-8')) if meta.exists() else []
+        if not isinstance(items, list):
+            items = []
+    except Exception:
+        items = []
+    items.append({'file': filename, 'prompt': (prompt or '')[:300], 'ts': time.time()})
+    items = items[-100:]
+    meta.write_text(json.dumps(items, ensure_ascii=False), encoding='utf-8')
+
+
+def api_picture_list(telegram_id: int) -> list[dict]:
+    """Newest-first gallery of the user's studio pictures."""
+    meta = _picture_folder(telegram_id) / 'meta.json'
+    if not meta.exists():
+        return []
+    try:
+        items = json.loads(meta.read_text(encoding='utf-8'))
+        if not isinstance(items, list):
+            return []
+    except Exception:
+        return []
+    out = []
+    for item in reversed(items[-30:]):
+        if not isinstance(item, dict) or not item.get('file'):
+            continue
+        out.append({
+            'file': f"/webapp/picture/{item['file']}",
+            'prompt': item.get('prompt', ''),
+            'ts': item.get('ts'),
+        })
+    return out
+
+
+def api_video_list(telegram_id: int, limit: int = 40) -> list[dict]:
+    """V3.55.0: newest-first gallery of the user's app videos (studio 🎬 +
+    chat-requested videos; circles stay in the chat history). The audit rows
+    live in UserGeneration while the bytes sit in Postgres ChatMedia, so the
+    list survives a Railway disk wipe — /webapp/media re-materializes each
+    file on first hit. Fail-silent: a DB hiccup shows an empty gallery."""
+    try:
+        from models.app_models import UserGeneration
+        with SessionLocal() as s:
+            rows = s.scalars(
+                select(UserGeneration)
+                .where(
+                    UserGeneration.telegram_id == int(telegram_id),
+                    UserGeneration.kind == 'video',
+                    UserGeneration.filename.is_not(None),
+                )
+                .order_by(UserGeneration.created_at.desc())
+                .limit(max(1, int(limit)))
+            ).all()
+        return [{
+            'file': f"/webapp/media/{row.filename}",
+            'prompt': (row.prompt or '')[:120],
+            'created': row.created_at.isoformat() if row.created_at is not None else '',
+        } for row in rows]
+    except Exception:
+        logger.exception('app video list failed user=%s', telegram_id)
+        return []
+
+
+def picture_file_path(telegram_id: int, filename: str) -> Path | None:
+    """Resolve a gallery image for serving; None unless it belongs to the user.
+
+    Filenames are server-generated (<unix_ms>_<hex>.jpg), so a caller can
+    only ever reference pictures they already received from the API.
+    """
+    safe_name = Path(str(filename)).name
+    if not re.fullmatch(r'\d+_[0-9a-f]{8,}\.(jpg|jpeg|png|webp)', safe_name):
+        return None
+    path = _picture_folder(telegram_id) / safe_name
+    return path if path.exists() else None
+
+
+# ── V3.51.1: user-generation audit feed (admin-only) ──────────────────────
+def _is_admin(telegram_id) -> bool:
+    try:
+        from config import ADMIN_TELEGRAM_IDS
+        return int(telegram_id) in ADMIN_TELEGRAM_IDS
+    except Exception:
+        return False
+
+
+def record_generation(telegram_id, kind, character_id, prompt, filename, *,
+                      engine=None, cost_usd=0.0) -> None:
+    """Log one Mini App generation for the owner's admin feed. Fire-and-forget:
+    an audit hiccup must never break the user's render or cost them a credit.
+    V3.56.0: also carries the rendering engine and its cost so the feed shows
+    the money trail (SpicyAPI/fal/gemini/pool), not just the picture."""
+    try:
+        from models.app_models import UserGeneration
+        with SessionLocal() as s:
+            s.add(UserGeneration(
+                telegram_id=int(telegram_id),
+                kind=str(kind or '')[:16],
+                character_id=(str(character_id)[:64] if character_id else None),
+                prompt=str(prompt or '')[:1000],
+                filename=(str(filename)[:255] if filename else None),
+                engine=(str(engine)[:48] if engine else None),
+                cost_usd=max(0.0, float(cost_usd or 0.0)),
+            ))
+            s.commit()
+    except Exception:
+        logger.exception('record generation failed user=%s', telegram_id)
+
+
+def record_generation_failure(telegram_id, kind, character_id, prompt, reason) -> None:
+    """V3.60.9: a render that failed shows up in the admin feed too, marked
+    engine='error' with the reason, so the owner sees what users got."""
+    record_generation(telegram_id, kind, character_id,
+                      f'❌ {str(reason or "")[:300]}\n{prompt or ""}', None, engine='error')
+
+
+def list_generations(limit: int = 60, offset: int = 0) -> list[dict]:
+    """Newest-first feed of user generations for the admin overlay."""
+    from models.app_models import UserGeneration
+    limit = max(1, min(100, int(limit)))
+    offset = max(0, int(offset))
+    try:
+        with SessionLocal() as s:
+            rows = s.scalars(
+                select(UserGeneration).order_by(UserGeneration.id.desc()).offset(offset).limit(limit)
+            ).all()
+            return [{
+                'id': r.id,
+                'user': r.telegram_id,
+                'kind': r.kind,
+                'character_id': r.character_id,
+                'prompt': r.prompt or '',
+                'filename': r.filename,
+                'engine': r.engine or '',
+                'cost_usd': float(r.cost_usd or 0.0),
+                'ts': r.created_at.isoformat() if r.created_at else None,
+            } for r in rows]
+    except Exception:
+        logger.exception('list generations failed')
+        return []
+
+
+def api_legal(lang: str = 'ru') -> dict:
+    """Documents tab payload — the Platega-required docs, visible in the app too."""
+    return {
+        'date': legal_service.LEGAL_DATE_SHORT,
+        'check_word': legal_service.LEGAL_CHECK_WORD,
+        'privacy': legal_service.PRIVACY_POLICY,
+        'agreement': legal_service.USER_AGREEMENT,
+        'tariffs': legal_service.tariffs_text(lang),
+        'support': legal_service.support_text(lang),
+    }
+
+
+def api_partner(user_id: int, telegram_id: int) -> dict:
+    """V3.37.0: the «Партнёрка» tab payload — live stats, the personal link
+    and the FAQ copy, all in the caller's interface language."""
+    from services import partner_service
+    from config import PARTNER_MIN_PAYOUT_RUB, PARTNER_PAYOUT_METHODS, REFERRAL_COMMISSION_PCT
+    lang = user_lang(telegram_id)
+    en = lang == EN
+    stats = partner_service.partner_stats(user_id)
+    # V3.47.0: bonus-tier ladder + the affiliate money leaderboard, surfaced on
+    # the same screen so real earners (not just volume) get visible status.
+    try:
+        from services.referral_service import referral_tier_progress
+        tier = referral_tier_progress(telegram_id)
+    except Exception:
+        tier = {'count': 0, 'tiers': [], 'next': None}
+    try:
+        top_earners = partner_service.affiliate_leaderboard(limit=5, period_days=30)
+    except Exception:
+        top_earners = []
+    from config import REFERRAL_QUALIFY_MESSAGES, REFERRAL_INVITEE_CREDITS, REFERRAL_REFERRER_CREDITS
+    try:
+        from services.referral_service import invite_progress
+        waiting = int(invite_progress(telegram_id).get('waiting') or 0)
+    except Exception:
+        waiting = 0
+    pct = int(REFERRAL_COMMISSION_PCT) if float(REFERRAL_COMMISSION_PCT).is_integer() else REFERRAL_COMMISSION_PCT
+    faq = [
+        {
+            'q': 'What is it?' if en else 'Что это такое?',
+            'a': (f'The affiliate program: you earn {pct}% of every purchase your invited friends make. '
+                  'It runs forever — commission lands with each of their purchases, permanently.') if en else
+                 (f'Партнёрская программа: ты получаешь {pct}% от всех покупок приглашённых тобой друзей. '
+                  'Это бессрочная программа — комиссия капает с каждой их покупки навсегда.'),
+        },
+        {
+            'q': 'How does it work?' if en else 'Как это работает?',
+            'a': ('1. Share your link below. 2. Your friend opens it, starts the bot and buys something. '
+                  f'3. You automatically get {pct}% of every purchase they make — premium, photos, video, everything.') if en else
+                 ('1. Поделись своей ссылкой ниже. 2. Друг переходит, запускает бота и что-то покупает. '
+                  f'3. Тебе автоматически капает {pct}% от каждой его покупки — с премиума, фото, видео, всего.'),
+        },
+        {
+            'q': 'How do I get paid?' if en else 'Как мне вывести деньги?',
+            'a': (f'Reach {PARTNER_MIN_PAYOUT_RUB} ₽ and tap «Withdraw». Payouts go to {PARTNER_PAYOUT_METHODS}. '
+                  'The owner confirms manually, usually within a day.') if en else
+                 (f'Набери {PARTNER_MIN_PAYOUT_RUB} ₽ и нажми «Вывести деньги». Выплата — на {PARTNER_PAYOUT_METHODS}. '
+                  'Владелец подтверждает вручную, обычно в течение суток.'),
+        },
+        {
+            'q': 'Is the payout one-time?' if en else 'Выплата разовая?',
+            'a': (f'No! This is not a one-time reward — it is a permanent passive income: {pct}% of every '
+                  'purchase your referrals make, forever.') if en else
+                 (f'Нет! Это не разовая выплата, а постоянный пассивный доход: {pct}% с каждой покупки '
+                  'твоих рефералов капают всегда.'),
+        },
+        {
+            'q': 'More questions' if en else 'У меня остались вопросы',
+            'a': ('Write /support right in the bot — the message reaches the owner and he replies '
+                  'personally.') if en else
+                 ('Напиши /support прямо в боте — сообщение попадёт владельцу, он ответит лично.'),
+        },
+    ]
+    return {
+        'enabled': True,
+        'pct': pct,
+        'invited': stats['invited'],
+        'earned_rub': stats['earned_rub'],
+        'balance_rub': stats['balance_rub'],
+        'pending_payout': bool(stats['pending_payout_id']),
+        'min_payout_rub': PARTNER_MIN_PAYOUT_RUB,
+        'payout_methods': PARTNER_PAYOUT_METHODS,
+        'link': None,  # filled by the caller — only the bot knows its username
+        'faq': faq,
+        # V3.47.0 growth additions
+        'referral_count': tier['count'],
+        'tiers': tier['tiers'],
+        'tier_next': tier['next'],
+        'top_earners': top_earners,
+        # V3.85.0: the partner tab — a friend counts after N real messages
+        'qualify_messages': REFERRAL_QUALIFY_MESSAGES,
+        'waiting': waiting,
+        'friend_peaches': REFERRAL_INVITEE_CREDITS,
+        'friend_bonus': REFERRAL_REFERRER_CREDITS,
+    }
+
+
+_GALLERY_CACHE: dict[str, list[Path]] = {}
+
+
+def invalidate_gallery_cache(character_id: str) -> None:
+    """V3.44.13: drop a cached (possibly empty) gallery so a healed avatar shows.
+
+    Custom personas cache an empty list when ``avatar.jpg`` is missing from the
+    ephemeral disk; without this the storefront would 404 until the next boot
+    even after the file was re-downloaded.
+    """
+    _GALLERY_CACHE.pop(character_id, None)
+
+
+def character_gallery(character_id: str) -> list[Path]:
+    """V3.39.0: the canonical shots of a character (face first, then look).
+
+    The Come Closer character page leads with a horizontal photo strip, so the
+    storefront needs every canonical reference, not just the face.
+    V3.43.9: cached to avoid repeated glob() calls on every page load.
+    """
+    if character_id in _GALLERY_CACHE:
+        return _GALLERY_CACHE[character_id]
+    base = ROOT / 'data'
+    if is_custom_character(character_id):
+        path = base / 'custom_references' / character_id / 'avatar.jpg'
+        result = [path] if path.exists() else []
+        _GALLERY_CACHE[character_id] = result
+        return result
+    rel = _FACE_REFERENCES.get(character_id)
+    if not rel:
+        _GALLERY_CACHE[character_id] = []
+        return []
+    folder = base.joinpath(rel[0], rel[1])
+    if not folder.exists():
+        _GALLERY_CACHE[character_id] = []
+        return []
+    result = sorted(p for p in folder.glob('*.png') if p.name.startswith(('00_', '01_', '02_', '03_', '04_', '05_')))
+    _GALLERY_CACHE[character_id] = result
+    return result
+
+
+def character_card_gif(character_id: str) -> Path | None:
+    """V3.40.0: the looping animated tile of a built-in heroine, or None.
+
+    The owner benchmarked Come Closer's living storefront cards; our answer
+    is a pre-rendered Ken-Burns loop per heroine (``card_preview.webp`` — an
+    animated «гифка» 5-10x lighter than a GIF container — next to her canonical
+    references) served straight from disk.
+    """
+    if is_custom_character(character_id):
+        return None
+    rel = _FACE_REFERENCES.get(character_id)
+    if not rel:
+        return None
+    folder = ROOT.joinpath('data', rel[0], rel[1])
+    for name in ('card_preview.webp', 'card_preview.gif'):
+        tile = folder / name
+        if tile.exists():
+            return tile
+    return None
+
+
+def builtin_character_ids() -> tuple[str, ...]:
+    """V3.43.1: ids of the built-in heroines (the reference-map keys)."""
+    return tuple(_FACE_REFERENCES)
+
+
+# V3.43.3: the admin-uploaded storefront media of one character lives in its
+# own folder as ``card_override.<ext>`` — exactly one file at a time, the ext
+# decides how the grid renders it (jpg/png static, webp/gif animated <img>,
+# mp4 looping <video>).
+CARD_OVERRIDE_EXTS = ('.mp4', '.webp', '.gif', '.png', '.jpg')
+
+
+def card_media_folder(character_id: str) -> Path:
+    """V3.43.3: per-character folder for the admin-uploaded card media."""
+    return ROOT / 'data' / 'card_media' / character_id
+
+
+def character_card_override(character_id: str) -> Path | None:
+    """V3.43.3: the active storefront media override of a character, if any.
+
+    V3.48.1: PostgreSQL is now the source of truth. The bytes live in the
+    ``card_overrides`` table; the file under ``data/card_media/`` is only a cache.
+    After a Railway redeploy wipes the ephemeral disk, the first lookup restores
+    the file from the DB and re-materializes it, so the owner never has to
+    re-upload the showcase media again.
+    """
+    from models.app_models import CardOverride
+    folder = card_media_folder(character_id)
+    if folder.exists():
+        for ext in CARD_OVERRIDE_EXTS:
+            item = folder / f'card_override{ext}'
+            if item.exists():
+                return _ensure_web_video(item)
+    # disk-cache miss (post-redeploy): restore from PostgreSQL and re-materialize.
+    try:
+        with SessionLocal() as s:
+            row = s.scalar(select(CardOverride).where(CardOverride.character_id == character_id))
+            if not row:
+                return None
+            folder.mkdir(parents=True, exist_ok=True)
+            target = folder / f'card_override{row.ext}'
+            target.write_bytes(row.image_bytes)
+            return _ensure_web_video(target)
+    except Exception:
+        logger.exception('card override db restore failed character=%s', character_id)
+        return None
+
+
+def set_card_override(character_id: str, data: bytes, ext: str) -> Path:
+    """V3.43.3: replace the card media of a character (admin panel upload).
+
+    V3.48.1: persist the bytes to PostgreSQL (survives the ephemeral-disk wipe)
+    and mirror them to the disk cache so the grid keeps serving immediately.
+    """
+    from models.app_models import CardOverride, utcnow
+    folder = card_media_folder(character_id)
+    folder.mkdir(parents=True, exist_ok=True)
+    for stale_ext in CARD_OVERRIDE_EXTS:
+        stale = folder / f'card_override{stale_ext}'
+        if stale.exists():
+            stale.unlink()
+    target = folder / f'card_override{ext}'
+    target.write_bytes(data)
+    try:
+        content_type = {'.jpg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp',
+                        '.gif': 'image/gif', '.mp4': 'video/mp4'}.get(ext.lower(), 'application/octet-stream')
+        with SessionLocal() as s:
+            row = s.scalar(select(CardOverride).where(CardOverride.character_id == character_id))
+            if not row:
+                row = CardOverride(character_id=character_id)
+                s.add(row)
+            row.ext = ext
+            row.content_type = content_type
+            row.image_bytes = data
+            row.updated_at = utcnow()
+            s.commit()
+    except Exception:
+        logger.exception('card override db persist failed character=%s', character_id)
+    return target
+
+
+def clear_card_override(character_id: str) -> bool:
+    """V3.43.3: drop the override so the card falls back to the plain photo.
+
+    V3.48.1: also delete the PostgreSQL row, otherwise the disk cache would be
+    silently re-materialized from the DB on the next lookup.
+    """
+    from models.app_models import CardOverride
+    folder = card_media_folder(character_id)
+    removed = False
+    for stale_ext in CARD_OVERRIDE_EXTS:
+        stale = folder / f'card_override{stale_ext}'
+        if stale.exists():
+            stale.unlink()
+            removed = True
+    try:
+        with SessionLocal() as s:
+            row = s.scalar(select(CardOverride).where(CardOverride.character_id == character_id))
+            if row:
+                s.delete(row)
+                s.commit()
+                removed = True
+    except Exception:
+        logger.exception('card override db delete failed character=%s', character_id)
+    return removed
+
+
+# ── V3.47.4: character-page carousel visuals (admin-set, DB-backed) ───────
+# Pure storefront: these shots replace ONLY the photo strip on the character
+# page. The canonical references keep driving generated photos, so the hero's
+# locked appearance is untouched. Bytes live in PostgreSQL; URLs carry the row
+# id, so every swap is instantly cache-busted without a deploy.
+PAGE_GALLERY_MAX_SHOTS = 6
+PAGE_GALLERY_MAX_BYTES = 8 * 1024 * 1024
+
+
+def page_gallery_shots(character_id: str) -> list[dict]:
+    """The admin-set carousel shots of a character, in display order."""
+    from models.app_models import PageGalleryShot
+    try:
+        with SessionLocal() as s:
+            rows = s.scalars(
+                select(PageGalleryShot)
+                .where(PageGalleryShot.character_id == character_id)
+                .order_by(PageGalleryShot.position, PageGalleryShot.id)
+            ).all()
+            return [{'id': r.id, 'content_type': r.content_type or 'image/jpeg'} for r in rows]
+    except Exception:
+        return []
+
+
+def add_page_gallery_shot(character_id: str, data: bytes, content_type: str = 'image/jpeg') -> bool:
+    from models.app_models import PageGalleryShot
+    if not data or len(data) > PAGE_GALLERY_MAX_BYTES:
+        return False
+    try:
+        with SessionLocal() as s:
+            existing = s.scalars(
+                select(PageGalleryShot).where(PageGalleryShot.character_id == character_id)
+            ).all()
+            if len(existing) >= PAGE_GALLERY_MAX_SHOTS:
+                return False
+            next_pos = max([r.position or 0 for r in existing], default=-1) + 1
+            s.add(PageGalleryShot(character_id=character_id, image_bytes=data,
+                                  content_type=content_type or 'image/jpeg', position=next_pos))
+            s.commit()
+        return True
+    except Exception:
+        return False
+
+
+def delete_page_gallery_shot(shot_id: int) -> bool:
+    from models.app_models import PageGalleryShot
+    try:
+        with SessionLocal() as s:
+            row = s.get(PageGalleryShot, shot_id)
+            if not row:
+                return False
+            s.delete(row)
+            s.commit()
+        return True
+    except Exception:
+        return False
+
+
+def clear_page_gallery(character_id: str) -> int:
+    from models.app_models import PageGalleryShot
+    try:
+        with SessionLocal() as s:
+            rows = s.scalars(
+                select(PageGalleryShot).where(PageGalleryShot.character_id == character_id)
+            ).all()
+            for r in rows:
+                s.delete(r)
+            s.commit()
+        return len(rows)
+    except Exception:
+        return 0
+
+
+def get_page_gallery_shot(shot_id: int) -> tuple[bytes, str] | None:
+    """(bytes, content_type) of one carousel shot for the public route."""
+    from models.app_models import PageGalleryShot
+    try:
+        with SessionLocal() as s:
+            row = s.get(PageGalleryShot, shot_id)
+            if not row:
+                return None
+            return row.image_bytes, (row.content_type or 'image/jpeg')
+    except Exception:
+        return None
+
+
+def character_card_live(character_id: str) -> Path | None:
+    """V3.43.1: the i2v-rendered living tile (``card_live.mp4``) of a heroine.
+
+    The owner asked for tiles where the girl actually smiles and blows an air
+    kiss instead of a Ken-Burns zoom; those clips are rendered once per
+    heroine by the admin «живые плитки» job and served as muted loops.
+    """
+    if is_custom_character(character_id):
+        return None
+    rel = _FACE_REFERENCES.get(character_id)
+    if not rel:
+        return None
+    live = ROOT.joinpath('data', rel[0], rel[1]) / 'card_live.mp4'
+    return _ensure_web_video(live) if live.exists() else None
+
+
+_FASTSTART_CHECKED: dict[str, tuple[int, int]] = {}
+
+
+def _ensure_web_video(item: Path) -> Path:
+    """V3.57.9: make a tile mp4 moov-first once (memoised per mtime/size)."""
+    try:
+        if item.suffix.lower() != '.mp4':
+            return item
+        st = item.stat()
+        key = str(item)
+        if _FASTSTART_CHECKED.get(key) == (st.st_mtime_ns, st.st_size):
+            return item
+        from services.mp4_faststart import ensure_faststart
+        ensure_faststart(item)
+        st = item.stat()
+        _FASTSTART_CHECKED[key] = (st.st_mtime_ns, st.st_size)
+    except OSError:
+        pass
+    return item
+
+
+def asset_version(character_id: str) -> str:
+    """V3.43.2: cache-buster stamp for the storefront assets of one heroine.
+
+    Telegram's WebView kept the previous card tile for the whole ``max-age``
+    window, so for up to an hour after a re-render the grid showed the old
+    girl. Every asset URL now carries ``?v=<newest mtime in her reference
+    folder>`` — rebuilding a tile or a live clip changes the URL and forces
+    the client to fetch the fresh file.
+    """
+    # V3.57.9: the stamp is a CONTENT fingerprint, not the newest mtime. Every
+    # Railway redeploy re-checks-out the repo and re-materializes the card
+    # overrides from PostgreSQL with a fresh mtime, so the old stamp changed
+    # on every release and every client re-downloaded ~8 MB of tile videos.
+    rel = _FACE_REFERENCES.get(character_id)
+    folders = []
+    if rel:
+        folders.append(ROOT.joinpath('data', rel[0], rel[1]))
+    # V3.43.3: an admin-uploaded override re-stamps the URLs too.
+    folders.append(card_media_folder(character_id))
+    digest = hashlib.sha1()
+    for folder in folders:
+        if folder.exists():
+            for item in sorted(folder.iterdir()):
+                _ensure_web_video(item)
+                fp = _file_fingerprint(item)
+                if fp:
+                    digest.update(fp.encode('utf-8'))
+    return digest.hexdigest()[:10]
+
+
+_FINGERPRINT_CACHE: dict[str, tuple[int, int, str]] = {}
+
+
+def _file_fingerprint(item: Path) -> str:
+    """name + size + crc32 of the first and last 64 KB, cached per (mtime, size)."""
+    try:
+        st = item.stat()
+        if not item.is_file():
+            return ''
+    except OSError:
+        return ''
+    key = str(item)
+    hit = _FINGERPRINT_CACHE.get(key)
+    if hit and hit[0] == st.st_mtime_ns and hit[1] == st.st_size:
+        return hit[2]
+    try:
+        with item.open('rb') as fh:
+            crc = zlib.crc32(fh.read(65536))
+            if st.st_size > 65536:
+                fh.seek(max(65536, st.st_size - 65536))
+                crc = zlib.crc32(fh.read(65536), crc)
+    except OSError:
+        return ''
+    fp = f'{item.name}:{st.st_size}:{crc:08x};'
+    _FINGERPRINT_CACHE[key] = (st.st_mtime_ns, st.st_size, fp)
+    return fp
+
+
+def canonical_face_bytes(character_id: str, max_side: int = 768) -> bytes | None:
+    """V3.43.1: the canonical face reference as a compact JPEG for i2v."""
+    rel = _FACE_REFERENCES.get(character_id)
+    if not rel:
+        return None
+    folder = ROOT.joinpath('data', rel[0], rel[1])
+    sources = sorted(folder.glob('00_*face*.png')) or sorted(folder.glob('01_*look*.png'))
+    if not sources:
+        return None
+    import io
+    from PIL import Image
+    img = Image.open(sources[0]).convert('RGB')
+    width, height = img.size
+    scale = min(1.0, max_side / max(width, height))
+    if scale < 1.0:
+        img = img.resize((int(width * scale), int(height * scale)), Image.LANCZOS)
+    buf = io.BytesIO()
+    img.save(buf, format='JPEG', quality=88)
+    return buf.getvalue()
+
+
+def write_card_live(character_id: str, video_bytes: bytes) -> Path | None:
+    """V3.43.1: persist a rendered living tile next to the references."""
+    rel = _FACE_REFERENCES.get(character_id)
+    if not rel or not video_bytes:
+        return None
+    path = ROOT.joinpath('data', rel[0], rel[1]) / 'card_live.mp4'
+    path.write_bytes(video_bytes)
+    return path
+
+
+def rebuild_card_tile(character_id: str) -> Path | None:
+    """V3.43.1: re-render the Ken-Burns loop tile from the CURRENT canonicals.
+
+    Swapping reference PNGs used to leave the old storefront «гифка» on disk;
+    this re-renders ``card_preview.webp`` (24-frame sine zoom+pan loop) so new
+    faces reach the grid without a code deploy.
+    """
+    rel = _FACE_REFERENCES.get(character_id)
+    if not rel:
+        return None
+    folder = ROOT.joinpath('data', rel[0], rel[1])
+    sources = sorted(folder.glob('01_*look*.png')) or sorted(folder.glob('00_*face*.png'))
+    if not sources:
+        return None
+    import math
+    from PIL import Image
+    width, height, frames = 300, 400, 16
+    img = Image.open(sources[0]).convert('RGB')
+    w, h = img.size
+    scale = max(width / w, height / h) * 1.14
+    base = img.resize((max(1, int(w * scale)), max(1, int(h * scale))), Image.LANCZOS)
+    nw, nh = base.size
+    out_frames = []
+    for i in range(frames):
+        t = i / frames
+        zoom = 1.0 + 0.07 * (0.5 - 0.5 * math.cos(2 * math.pi * t))
+        cw = min(nw, int(width * 1.14 / zoom))
+        ch = min(nh, int(height * 1.14 / zoom))
+        px = int((nw - cw) * (0.5 + 0.35 * math.sin(2 * math.pi * t)))
+        py = int((nh - ch) * (0.5 - 0.35 * math.sin(2 * math.pi * t)))
+        out_frames.append(base.crop((px, py, px + cw, py + ch)).resize((width, height), Image.LANCZOS))
+    tile = folder / 'card_preview.webp'
+    out_frames[0].save(tile, save_all=True, append_images=out_frames[1:],
+                       duration=90, loop=0, quality=64)
+    return tile
+
+
+def character_views_map() -> dict[str, int]:
+    """V3.40.0: view counters for the storefront badges (missing row = 0)."""
+    try:
+        with SessionLocal() as s:
+            rows = s.scalars(select(CharacterStat)).all()
+            return {r.character_id: r.views or 0 for r in rows}
+    except Exception:
+        return {}
+
+
+def bump_character_views(character_id: str) -> int:
+    """V3.40.0: +1 view when the character page opens; returns the new total."""
+    try:
+        with SessionLocal() as s:
+            row = s.get(CharacterStat, character_id)
+            if row is None:
+                row = CharacterStat(character_id=character_id, views=0)
+                s.add(row)
+            row.views = (row.views or 0) + 1
+            s.commit()
+            return row.views
+    except Exception:
+        return 0
+
+
+def character_leaderboard(limit: int = 10) -> list[dict]:
+    """V3.44.0: top characters by views — the popularity leaderboard."""
+    try:
+        with SessionLocal() as s:
+            rows = (
+                s.query(CharacterStat)
+                .order_by(CharacterStat.views.desc())
+                .limit(limit)
+                .all()
+            )
+            out = []
+            for rank, row in enumerate(rows, 1):
+                card = get_card(row.character_id)
+                if card and card.is_visible:
+                    out.append({
+                        'rank': rank,
+                        'id': row.character_id,
+                        'name': card.display_name,
+                        'emoji': card.button_emoji or '',
+                        'views': row.views or 0,
+                    })
+            return out
+    except Exception:
+        return []
+
+
+def get_character_comments(character_id: str, limit: int = 20) -> list[dict]:
+    """V3.44.0: public comments under a character card."""
+    try:
+        with SessionLocal() as s:
+            rows = (
+                s.query(CharacterComment)
+                .filter(CharacterComment.character_id == character_id)
+                .order_by(CharacterComment.created_at.desc())
+                .limit(limit)
+                .all()
+            )
+            out = []
+            for row in rows:
+                user = s.query(User).filter(User.telegram_id == str(row.telegram_id)).first()
+                out.append({
+                    'id': row.id,
+                    'text': row.text,
+                    'author': user.name if user and user.name else f'User {row.telegram_id}',
+                    'created_at': row.created_at.isoformat() if row.created_at else '',
+                })
+            return out
+    except Exception:
+        return []
+
+
+def add_character_comment(character_id: str, telegram_id: int, text: str) -> dict:
+    """V3.44.0: add a comment under a character card."""
+    try:
+        with SessionLocal() as s:
+            comment = CharacterComment(
+                character_id=character_id,
+                telegram_id=telegram_id,
+                text=text,
+            )
+            s.add(comment)
+            s.commit()
+            s.refresh(comment)
+            user = s.query(User).filter(User.telegram_id == str(telegram_id)).first()
+            return {
+                'id': comment.id,
+                'text': comment.text,
+                'author': user.name if user and user.name else f'User {telegram_id}',
+                'created_at': comment.created_at.isoformat() if comment.created_at else '',
+            }
+    except Exception:
+        return {}
+
+
+def get_notification_prefs(telegram_id: int) -> dict:
+    """V3.44.0: get notification preferences for a user."""
+    try:
+        with SessionLocal() as s:
+            pref = s.query(NotificationPref).filter(NotificationPref.telegram_id == telegram_id).first()
+            if not pref:
+                pref = NotificationPref(telegram_id=telegram_id)
+                s.add(pref)
+                s.commit()
+                s.refresh(pref)
+            return {
+                'enabled': pref.enabled,
+                'daily_bonus': pref.daily_bonus,
+                'new_messages': pref.new_messages,
+                'character_updates': pref.character_updates,
+            }
+    except Exception:
+        return {'enabled': True, 'daily_bonus': True, 'new_messages': True, 'character_updates': True}
+
+
+def update_notification_prefs(telegram_id: int, prefs: dict) -> dict:
+    """V3.44.0: update notification preferences for a user."""
+    try:
+        with SessionLocal() as s:
+            pref = s.query(NotificationPref).filter(NotificationPref.telegram_id == telegram_id).first()
+            if not pref:
+                pref = NotificationPref(telegram_id=telegram_id)
+                s.add(pref)
+            if 'enabled' in prefs:
+                pref.enabled = bool(prefs['enabled'])
+            if 'daily_bonus' in prefs:
+                pref.daily_bonus = bool(prefs['daily_bonus'])
+            if 'new_messages' in prefs:
+                pref.new_messages = bool(prefs['new_messages'])
+            if 'character_updates' in prefs:
+                pref.character_updates = bool(prefs['character_updates'])
+            s.commit()
+            s.refresh(pref)
+            return {
+                'enabled': pref.enabled,
+                'daily_bonus': pref.daily_bonus,
+                'new_messages': pref.new_messages,
+                'character_updates': pref.character_updates,
+            }
+    except Exception:
+        return {}
+
+
+# V3.55.5: the V3.44.0 daily bonus wheel (spin_daily_bonus / get_daily_bonus_status,
+# 0.01–0.27 🍑) is retired — it wrote float peaches into the INTEGER photo_credits
+# column and coexisted with the new streak gift rail (services/gift_service.py).
+# The daily_bonus NotificationPref flag above stays: it now gates gift reminders.
+# The DailyBonus table remains in the DB as paid history (legacy rows untouched).
+
+
+# V3.44.0: "she messages first" — simulated incoming message templates.
+SIMULATED_MESSAGE_TEMPLATES = [
+    "Привет! Я тут подумала о тебе... Как твой день?",
+    "Скучала сегодня. Расскажи, что нового?",
+    "Увидела кое-что и сразу о тебе вспомнила ",
+    "Эй, ты там как? Давно не общались!",
+    "Мне нужно с кем-то поговорить. Ты свободен?",
+    "Привет! Я сегодня особенно скучаю по тебе...",
+    "Угадай, о ком я думала весь день?",
+    "Мне приснилось кое-что интересное... Хочешь расскажу?",
+]
+
+
+def generate_simulated_message(telegram_id: int, character_id: str) -> dict:
+    """V3.44.0: generate a simulated incoming message from a character."""
+    import random
+    try:
+        with SessionLocal() as s:
+            template = random.choice(SIMULATED_MESSAGE_TEMPLATES)
+            msg = SimulatedMessage(
+                telegram_id=telegram_id,
+                character_id=character_id,
+                text=template,
+            )
+            s.add(msg)
+            s.commit()
+            s.refresh(msg)
+            return {
+                'id': msg.id,
+                'character_id': msg.character_id,
+                'text': msg.text,
+                'sent_at': msg.sent_at.isoformat() if msg.sent_at else '',
+            }
+    except Exception:
+        return {}
+
+
+def get_pending_simulated_messages(telegram_id: int) -> list[dict]:
+    """V3.44.0: get undelivered simulated messages for a user."""
+    try:
+        with SessionLocal() as s:
+            rows = s.query(SimulatedMessage).filter(
+                SimulatedMessage.telegram_id == telegram_id,
+                SimulatedMessage.delivered == False
+            ).order_by(SimulatedMessage.sent_at.asc()).all()
+            out = []
+            for row in rows:
+                out.append({
+                    'id': row.id,
+                    'character_id': row.character_id,
+                    'text': row.text,
+                    'sent_at': row.sent_at.isoformat() if row.sent_at else '',
+                })
+            return out
+    except Exception:
+        return []
+
+
+def mark_simulated_message_delivered(message_id: int) -> bool:
+    """V3.44.0: mark a simulated message as delivered."""
+    try:
+        with SessionLocal() as s:
+            msg = s.get(SimulatedMessage, message_id)
+            if msg:
+                msg.delivered = True
+                s.commit()
+                return True
+            return False
+    except Exception:
+        return False
+
+
+def character_like_state(character_id: str, telegram_id: int | None) -> dict:
+    """V3.43.0: the «♡ N» counter of a heroine plus whether THIS user already
+    liked her — the Come Closer character page badge, per-user aware."""
+    try:
+        with SessionLocal() as s:
+            row = s.get(CharacterStat, character_id)
+            count = int(row.likes or 0) if row else 0
+            liked = bool(telegram_id) and s.get(CharacterLike, (character_id, int(telegram_id))) is not None
+        return {'count': count, 'liked': liked}
+    except Exception:
+        return {'count': 0, 'liked': False}
+
+
+def toggle_character_like(character_id: str, telegram_id: int) -> dict:
+    """V3.43.0: tap the heart once to like, again to take it back. The marker
+    row and the counter move together inside one transaction."""
+    try:
+        with SessionLocal() as s:
+            row = s.get(CharacterStat, character_id)
+            if row is None:
+                row = CharacterStat(character_id=character_id, views=0, likes=0)
+                s.add(row)
+            mark = s.get(CharacterLike, (character_id, int(telegram_id)))
+            if mark:
+                s.delete(mark)
+                row.likes = max(0, (row.likes or 0) - 1)
+                liked = False
+            else:
+                s.add(CharacterLike(character_id=character_id, telegram_id=int(telegram_id)))
+                row.likes = (row.likes or 0) + 1
+                liked = True
+            s.commit()
+            return {'count': int(row.likes or 0), 'liked': liked}
+    except Exception:
+        logger.exception('character like toggle failed char=%s user=%s', character_id, telegram_id)
+        return character_like_state(character_id, telegram_id)
+
+
+def character_photo(character_id: str, index: int = 0) -> tuple[bytes, str] | None:
+    """(bytes, content_type) of a storefront photo, or None if unavailable.
+
+    Built-ins read their canonical references (index 0 = face, 1 = look);
+    constructor personas read the cached avatar (v3.31.8
+    ``ensure_custom_avatar_cached``).
+    """
+    paths = character_gallery(character_id)
+    if not paths:
+        return None
+    path = paths[max(0, min(int(index or 0), len(paths) - 1))]
+    content_type = 'image/jpeg' if path.suffix.lower() in ('.jpg', '.jpeg') else 'image/png'
+    try:
+        return path.read_bytes(), content_type
+    except OSError:
+        return None
+
+
+# ── V3.57.9: web-sized storefront images ──────────────────────────────────
+# The storefront served the canonical references and admin card uploads as-is:
+# 2–5 MB PNGs per tile, so the grid and the character page took seconds to
+# paint (worse right after a redeploy, when every ?v= stamp changes and all
+# clients re-download). The HTTP routes now send a WebP capped at
+# WEB_IMAGE_MAX_SIDE; the originals stay untouched for generation/video.
+WEB_IMAGE_MAX_SIDE = 1280
+WEB_IMAGE_MIN_BYTES = 300_000  # smaller files are already cheap — pass through
+_WEB_IMAGE_CACHE_SIZE = 96
+_web_image_cache: dict[tuple, tuple[bytes, str]] = {}
+
+
+def web_image(data: bytes, content_type: str, cache_key: str) -> tuple[bytes, str]:
+    """(bytes, content_type) of a browser-sized version of a storefront image.
+
+    JPEG/PNG/WebP over WEB_IMAGE_MIN_BYTES are downscaled to WEB_IMAGE_MAX_SIDE
+    on the long side and re-encoded as WebP. Anything else (GIF, MP4, small
+    files) or any decoding error returns the input unchanged, so a bad file can
+    never break the route. Results are memoised per (key, size, head/tail hash).
+    """
+    if content_type not in ('image/jpeg', 'image/png', 'image/webp') or len(data) < WEB_IMAGE_MIN_BYTES:
+        return data, content_type
+    key = (cache_key, len(data), hashlib.sha1(data[:8192] + data[-8192:]).hexdigest())
+    hit = _web_image_cache.get(key)
+    if hit is not None:
+        return hit
+    try:
+        from io import BytesIO
+        from PIL import Image, ImageOps
+        with Image.open(BytesIO(data)) as src:
+            img = ImageOps.exif_transpose(src)
+            img.thumbnail((WEB_IMAGE_MAX_SIDE, WEB_IMAGE_MAX_SIDE), Image.LANCZOS)
+            if img.mode not in ('RGB', 'RGBA'):
+                img = img.convert('RGBA' if 'A' in img.getbands() else 'RGB')
+            out = BytesIO()
+            img.save(out, 'WEBP', quality=82, method=4)
+        result = (out.getvalue(), 'image/webp')
+        if len(result[0]) >= len(data):
+            result = (data, content_type)
+    except Exception:
+        logger.warning('web_image: could not optimise %s', cache_key, exc_info=True)
+        return data, content_type
+    if len(_web_image_cache) >= _WEB_IMAGE_CACHE_SIZE:
+        _web_image_cache.pop(next(iter(_web_image_cache)))
+    _web_image_cache[key] = result
+    return result
+
+
+# ── V3.39.0: in-app chat media (photos / circles / voice) ──────────────────
+
+APP_MEDIA_DIR = ROOT / 'data' / 'app_media'
+_MEDIA_NAME_RE = re.compile(r'^\d+_[0-9a-f]{8}\.(jpg|jpeg|png|mp4|ogg)$')
+
+
+def save_chat_media(telegram_id: int, data: bytes, ext: str, content_type: str = '') -> str:
+    """Store a generated media file per user; returns the unguessable name.
+
+    V3.44.8: the bytes are also persisted in PostgreSQL (chat_media table) —
+    Railway's ephemeral disk wipes data/app_media on every redeploy, and chat
+    history photos must survive it. The disk file is only a cache.
+    """
+    folder = APP_MEDIA_DIR / str(int(telegram_id))
+    folder.mkdir(parents=True, exist_ok=True)
+    name = f'{int(time.time() * 1000)}_{secrets.token_hex(4)}.{ext}'
+    (folder / name).write_bytes(data)
+    try:
+        with SessionLocal() as session:
+            session.add(ChatMedia(
+                telegram_id=str(int(telegram_id)), filename=name,
+                content_type=content_type or 'application/octet-stream', data=data,
+            ))
+            session.commit()
+    except Exception:
+        logger.exception('chat media db persist failed user=%s', telegram_id)
+    return name
+
+
+def chat_media_file_path(telegram_id: int, filename: str) -> Path | None:
+    """Owner-scoped media path; None when the name is not a server-made one.
+
+    V3.44.8: on a disk-cache miss (post-redeploy) the bytes are restored from
+    PostgreSQL and re-materialized on disk, so history photos keep loading.
+    """
+    if not _MEDIA_NAME_RE.match(filename or ''):
+        return None
+    path = APP_MEDIA_DIR / str(int(telegram_id)) / filename
+    if path.exists():
+        return path
+    try:
+        with SessionLocal() as session:
+            row = session.scalar(select(ChatMedia).where(
+                ChatMedia.telegram_id == str(int(telegram_id)),
+                ChatMedia.filename == filename,
+            ))
+            if not row:
+                return None
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(row.data)
+            return path
+    except Exception:
+        logger.exception('chat media db restore failed user=%s file=%s', telegram_id, filename)
+        return None

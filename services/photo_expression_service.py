@@ -1,0 +1,336 @@
+"""Rule-based facial-expression detection for photo generation.
+
+Photos used to always show the character with the same "warm relaxed smile",
+regardless of the conversation. This module maps the emotional tone of the user's
+latest message to a facial-expression description that is then injected into the
+photo prompt — so a compliment yields a genuine smile, rudeness yields a hurt/
+disappointed look, etc.
+
+Deliberately NOT LLM-based: the photo pipeline is a paid, latency-sensitive path
+and an extra model call per image would add cost and a failure point. Keyword
+rules are deterministic, cheap, and good enough for expressive variety.
+
+Matching is token-prefix based so Russian morphology works: "красивая" matches
+the stem "красив", "обожаю" matches "обожа", etc. A plain "пришли фото" is NOT
+rude — only genuine insults or pushy demands trigger an upset expression.
+
+All expression descriptions are kept safe and visually clear — no "crying hard",
+no grotesque or exaggerated distress — so image quality and the character's
+identity lock are never undermined.
+"""
+from __future__ import annotations
+
+import random
+import re
+
+_TOKEN_SPLIT = re.compile(r'[^\w]+', re.UNICODE)
+
+# Multi-word phrases checked first via substring match (token-prefix can't see
+# phrases like "хочу тебя" because tokens are split on whitespace).
+_PHRASES: list[tuple[str, str]] = [
+    ('давай уже', 'upset'),
+    ('хочу тебя', 'teasing'),
+    ('хочу поцеловать', 'teasing'),
+    ('хочу обнять', 'teasing'),
+    ('want you', 'teasing'),
+    ('want to kiss', 'teasing'),
+    ('want to hug', 'teasing'),
+]
+
+# Ordered by priority: the first category whose stem matches a token wins.
+# Rudeness is checked before compliment so "ты тупая, но красивая" resolves to
+# upset (the insult dominates the expression in that moment).
+_CATEGORIES: list[tuple[str, tuple[str, ...]]] = [
+    # Rudeness / insults / aggressive demanding → hurt, disappointed.
+    # A plain "пришли фото" / "давай" is NOT rude — it stays neutral. Only
+    # genuine insults or pushy demands ("давай уже", быстрее, немедленно) trigger upset.
+    (
+        'upset',
+        (
+            'немедленно', 'идиот', 'тупая', 'дура',
+            'ненави', 'отвратит', 'уродли', 'придур', 'заткни', 'отстань',
+            'stupid', 'ugly', 'hate', 'shut', 'dumb', 'bitch', 'whore', 'idiot',
+        ),
+    ),
+    # User is sad / lonely / tired → caring, concerned.
+    (
+        'concerned',
+        (
+            'грустно', 'грустн', 'плохо', 'устал', 'одинок', 'плач', 'депресс',
+            'тосклив', 'тяжело', 'обидно', 'расстроен', 'тоскую',
+            'sad', 'lonely', 'tired', 'depress', 'cry', 'anxious', 'stress',
+            'exhausted', 'alone',
+        ),
+    ),
+    # Playful / flirty → teasing smirk.
+    # Note: bare "хочу"/"want" are intentionally NOT here — "хочу фото" or
+    # "хочу спать" must stay neutral, not become flirt. Match only explicit
+    # romantic/flirty stems.
+    (
+        'teasing',
+        (
+            'поцелуй', 'поцелова', 'обним', 'соблазн', 'флирт', 'заигрыв', 'провокаци',
+            'шалун', 'подразни', 'жажд', 'игрив', 'горяч',
+            'kiss', 'hug', 'cuddle', 'flirt', 'tease', 'wink', 'naughty',
+            'playful',
+        ),
+    ),
+    # Compliment / positive → warm genuine smile.
+    (
+        'smile',
+        (
+            'красив', 'красав', 'прекрасн', 'милый', 'мил', 'люблю', 'обожа', 'спасибо',
+            'благодар', 'класс', 'супер', 'шикарн', 'восхитительн', 'лучш',
+            'прелестн', 'симпатичн', 'чудесн', 'нравишься', 'тепло', 'уютн',
+            'good', 'beautiful', 'pretty', 'gorgeous', 'lovely', 'love', 'amazing',
+            'wonderful', 'cute', 'sweet', 'nice',
+        ),
+    ),
+]
+
+
+# Each value replaces the old hardcoded "natural warm relaxed expression..."
+# sentence inside the EXPRESSION block of the photo prompt.
+EXPRESSIONS: dict[str, str] = {
+    'smile': (
+        'a warm genuine soft smile with the eyes slightly crinkled, relaxed and happy. '
+        'Keep it subtle and believable; avoid an exaggerated forced grin.'
+    ),
+    'upset': (
+        'a slightly hurt, quietly disappointed expression: softer downturned mouth, '
+        'subdued gaze, gentle furrow of the brow. Calm and restrained — not crying, '
+        'not exaggerated distress, no tears.'
+    ),
+    'concerned': (
+        'a gentle caring, concerned expression: soft worried eyes, empathetic warm gaze, '
+        'a faint reassuring look. Subtle and believable, no exaggerated sadness.'
+    ),
+    'teasing': (
+        'a playful teasing smirk with one eyebrow slightly raised, flirty confident gaze '
+        'and a hint of a smile. Subtle and tasteful.'
+    ),
+    'neutral': (
+        'a natural warm relaxed expression. Keep it subtle, relaxed and believable; '
+        'avoid a blank stern expression and avoid an exaggerated forced grin.'
+    ),
+    # V3.31.7: extra pleasant expressions for the per-frame variety rotation.
+    # The owner complained every photo carried the same mimicry; packs now walk
+    # this wider pool frame by frame instead of one fixed warm smile.
+    'laughing': (
+        'a light genuine laugh: soft open smile with bright amused eyes and a tiny '
+        'natural head tilt. Joyful but restrained — no exaggerated wide-open mouth.'
+    ),
+    'confident': (
+        'a calm confident look: relaxed slight smile, steady direct gaze and a subtly '
+        'raised chin. Self-assured and elegant, never stern or cold.'
+    ),
+    'thoughtful': (
+        'a soft thoughtful expression: gentle half-smile, dreamy gaze directed slightly '
+        'away from the camera. Calm and reflective, not sad.'
+    ),
+    'shy': (
+        'a slightly shy bashful expression: faint closed-lip smile, soft glance from '
+        'under the lashes, a subtle tilt of the head. Tender and believable.'
+    ),
+    # V3.51.3: sensual mimicry for the private/intimate scenes ONLY (never public).
+    # The owner wanted the boudoir shots to actually look desirous instead of the
+    # same tasteful smile — tongue, bitten lip, heavy-lidded gaze. Still kept
+    # believable and non-grotesque so identity and image quality hold.
+    'desire': (
+        'a sensual desiring expression: just the tip of her tongue grazing her '
+        'lower lip between relaxed slightly parted lips — a single anatomically '
+        'correct tongue with natural soft pink colour and realistic moist texture, '
+        'never a long fully protruding tongue. Heavy-lidded eyes locked on the '
+        'camera. Confident and alluring, not exaggerated or cartoonish.'
+    ),
+    'biting_lip': (
+        'a flirty expression biting her lower lip: soft half-smile held back by her '
+        'teeth, warm inviting eyes, a hint of a blush. Playful and seductive.'
+    ),
+    'bedroom_eyes': (
+        'a seductive smolder: relaxed half-closed heavy-lidded eyes, slightly parted '
+        'lips, slow confident gaze into the camera. Sultry and calm.'
+    ),
+    'blow_kiss': (
+        'a playful affectionate moment leaning toward the camera to blow a kiss with '
+        'her one free hand near her lips (if she is holding a phone, it is the OTHER '
+        'hand; she still has exactly two hands in total), warm bright eyes and a soft '
+        'smile. Flirty and endearing.'
+    ),
+    'licking_lips': (
+        'a hungry sensual expression: the tongue slowly running up over her lower '
+        'lip, tip only visible between the lips — a single anatomically correct '
+        'tongue with natural pink moist texture, never sticking far out of the '
+        'mouth. Glossy lips slightly parted, eyes half-lidded and fixed on the '
+        'camera. Covetous and alluring — not a wide open mouth, not cartoonish.'
+    ),
+    'pouty_seductive': (
+        'a soft seductive pout: lower lip pushed out and caught between a faint smile, '
+        'warm inviting eyes tilted toward the camera, head slightly lowered. Sultry and '
+        'approachable — not a childish pout.'
+    ),
+    # V3.55.5: the owner asked for more mimicry after a playful tongue-out selfie —
+    # the look stays, the artefacts go: every mouth/tongue/hand expression now
+    # carries an explicit anatomical anchor (single correct tongue, tip only,
+    # natural colour; five-finger natural hand) and a never-protruding clause,
+    # because the raw wording rendered fake-looking tongues on weaker engines.
+    'tongue_out_playful': (
+        'a cute playful brat expression: the very tip of her tongue peeking out '
+        'between a mischievous smile, bright laughing eyes, head tilted. A single '
+        'anatomically correct tongue with natural soft pink texture, just the tip '
+        'showing between the lips — not a long hanging tongue, not cartoonish or '
+        'grotesque.'
+    ),
+    'wink': (
+        'a flirty wink with one eye closed naturally and a soft playful smile; the '
+        'winking eyelid relaxed with a believable crease and lashes, not a squeezed '
+        'distorted eye. Light, cheeky and photogenic.'
+    ),
+    'shush': (
+        'a conspirative playful look: the index finger of her one free hand gently '
+        'pressed to her lips in a mute gesture (if she is holding a phone, it is the '
+        'OTHER hand; she still has exactly two hands in total), bright eyes with a '
+        'hint of a smile, head slightly tilted. The hand is a natural slender female '
+        'hand with five correct fingers.'
+    ),
+    # V3.59.3: the owner wanted the intimate frames hotter still — pleasure and
+    # arousal faces for the PRIVATE scenes only (never in the public rotation).
+    'pleasure': (
+        'an aroused pleasured expression facing the camera: heavy-lidded eyes still '
+        'open and looking into the lens, lips softly parted, flushed cheeks. Intense '
+        'but subtle — her face keeps its exact identity and proportions, no rolled-up '
+        'eyes, no head thrown back, no distorted face, no wide gaping mouth.'
+    ),
+    'breathless': (
+        'a breathless flushed look straight into the camera: slightly parted glossy '
+        'lips, heavy-lidded hungry eyes, a rosy blush on cheeks and chest, face fully '
+        'visible and unobstructed. Hot and inviting, photogenic and natural — the '
+        'exact same face, only the expression changes.'
+    ),
+    'surprised': (
+        'a charmed surprised expression: softly raised brows, bright widened eyes '
+        'and a small open-mouth "oh" with relaxed lips. Delight rather than shock — '
+        'natural and understated, no exaggerated gape.'
+    ),
+    'sleepy_soft': (
+        'a cozy just-woke-up expression: heavy relaxed eyes half-open, a faint lazy '
+        'half-smile, head slightly sunk as if savouring warmth. Drowsy and tender, '
+        'still photogenic — no distorted face.'
+    ),
+}
+
+# V3.51.3/V3.51.4: the sensual pool. The owner wants this desirous mimicry walked on
+# EVERY photo (public scenes included), so it is now the default per-frame rotation
+# everywhere — kept deliberately wide so consecutive shots still look varied.
+SENSUAL_KEYS: tuple[str, ...] = (
+    'desire', 'biting_lip', 'bedroom_eyes', 'licking_lips', 'pouty_seductive',
+    'teasing', 'blow_kiss', 'confident',
+    # V3.55.5: playful mimicry joins the default rotation (all anatomy-anchored).
+    'tongue_out_playful', 'wink', 'shush',
+)
+
+# V3.59.3: private/boudoir scenes walk the sensual pool PLUS the arousal faces.
+PRIVATE_SENSUAL_KEYS: tuple[str, ...] = SENSUAL_KEYS + ('pleasure', 'breathless', 'pleasure', 'breathless')
+
+
+# V3.31.7: pleasant-expression keys used for the per-frame rotation when the
+# chat mood did not pin an explicit expression. Upset/concerned stay mood-only:
+# a random pack must never look sad without a reason.
+VARIETY_KEYS: tuple[str, ...] = (
+    'smile', 'laughing', 'teasing', 'confident', 'thoughtful', 'shy', 'neutral',
+    # V3.55.5: wider everyday pool for the mood-less rotation.
+    'wink', 'surprised', 'sleepy_soft',
+)
+
+
+# V3.60.9: the calm «tender» rotation lost its stone faces (neutral/thoughtful).
+LIVELY_VARIETY_KEYS: tuple[str, ...] = tuple(k for k in VARIETY_KEYS if k not in ('neutral', 'thoughtful'))
+
+
+def shuffled_variety_keys() -> tuple[str, ...]:
+    """Return the variety expression keys in random order.
+
+    A photo pack walks this rotation frame by frame, so consecutive photos no
+    longer repeat the same facial expression.
+    """
+    keys = list(LIVELY_VARIETY_KEYS)
+    random.shuffle(keys)
+    return tuple(keys)
+
+
+# V3.60.8: «у одной постоянно язык торчит» — three of the sensual faces show
+# the tongue, so a pack showed it on every second frame. A rotation now keeps
+# just one of them (picked at random), the rest of the pool stays.
+TONGUE_KEYS: frozenset[str] = frozenset({'desire', 'licking_lips', 'tongue_out_playful'})
+
+
+# V3.64.3: «что за ящерица» — even one tongue face per rotation rendered as a
+# lizard tongue. Random rotations show no tongue at all; the faces stay in
+# EXPRESSIONS for when the player asks for them explicitly.
+def _one_tongue(keys: list[str]) -> list[str]:
+    return [k for k in keys if k not in TONGUE_KEYS]
+
+
+def shuffled_sensual_variety_keys() -> tuple[str, ...]:
+    """V3.51.3/V3.51.4: the default per-frame rotation for EVERY scene — desirous
+    mimicry (tongue, bitten lip, smolder, pout) instead of the everyday tasteful
+    smiles. The owner asked for sensual emotion across all photos, not just the
+    private ones."""
+    keys = list(SENSUAL_KEYS)
+    random.shuffle(keys)
+    return tuple(_one_tongue(keys))
+
+
+def shuffled_private_sensual_keys() -> tuple[str, ...]:
+    """V3.59.3: the rotation for private scenes — duplicates weight the new
+    arousal faces up, dict.fromkeys keeps each key once after the shuffle."""
+    keys = list(PRIVATE_SENSUAL_KEYS)
+    random.shuffle(keys)
+    return tuple(_one_tongue(list(dict.fromkeys(keys))))
+
+
+def _tokens(text: str) -> list[str]:
+    return [t for t in _TOKEN_SPLIT.split(text.lower()) if t]
+
+
+def detect_expression_key(text: str | None) -> str | None:
+    """Return an expression key derived from the user's message, or None if the
+    message carries no clear emotional signal (caller falls back to the default
+    warm smile)."""
+    if not text:
+        return None
+    lowered = text.lower()
+    # 1. Multi-word phrases (substring) — checked first so "хочу тебя" and
+    #    "давай уже" match even though their tokens are split on whitespace.
+    for phrase, key in _PHRASES:
+        if phrase in lowered:
+            return key
+    # 2. Single-token stem-prefix match (handles Russian morphology).
+    toks = _tokens(text)
+    if not toks:
+        return None
+    for key, stems in _CATEGORIES:
+        for tok in toks:
+            for stem in stems:
+                if tok.startswith(stem):
+                    return key
+    return None
+
+
+PHOTO_SAFE_MOOD = {'upset': 'pouty_seductive', 'concerned': 'smile'}
+
+
+def expression_description(key: str | None, name: str) -> str:
+    """Build the EXPRESSION prompt sentence for a character named `name`.
+
+    Unknown/None keys fall back to the default neutral warm expression so the
+    pipeline never breaks on an unmapped value.
+    """
+    # V3.60.9: «одна модель вообще грустная» — a photo she chooses to send is
+    # never sulky: a rude/sad chat turns into a playful pout / warm smile.
+    key = PHOTO_SAFE_MOOD.get(key or '', key)
+    desc = EXPRESSIONS.get(key or '', EXPRESSIONS['neutral'])
+    # V3.59.4: a hot expression used to read as «a different face» — say outright
+    # that only the mimicry moves, the identity stays the reference's.
+    return (f'EXPRESSION: {name} has {desc} Only the mimicry changes: her face identity '
+            '(eye shape, nose, lips, jawline, face shape) stays exactly her own, the same as in her references.')

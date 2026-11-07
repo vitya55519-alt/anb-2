@@ -1,0 +1,271 @@
+"""V3.34.0 static checks: the Mini App becomes functional — Stars purchases
+(createInvoiceLink + tg.openInvoice reusing the bot's payment handlers) and
+character selection straight from the storefront grid."""
+import re
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+VERSION = (ROOT / 'VERSION').read_text(encoding='utf-8').strip()
+MAIN = (ROOT / 'main.py').read_text(encoding='utf-8')
+WEBAPP_SVC = (ROOT / 'services' / 'webapp_service.py').read_text(encoding='utf-8')
+INDEX = (ROOT / 'webapp' / 'index.html').read_text(encoding='utf-8')
+
+
+def test_version_bumped():
+    assert VERSION in ('3.44.4', '3.44.3', '3.43.7', '3.43.6', '3.43.5', '3.43.4', '3.43.3', '3.43.2', '3.43.1', '3.43.0', '3.42.2', '3.42.1', '3.42.0', '3.41.0', '3.40.0', '3.33.1', '3.34.0', '3.34.1', '3.35.0', '3.36.0', '3.37.0', '3.38.0', '3.39.0')
+
+
+def test_invoice_products_declared():
+    # Two standalone products: Premium (existing payload) and a new photo
+    # credit pack. Payloads must match what the payment handlers validate.
+    assert 'def api_invoice_products(' in WEBAPP_SVC
+    assert "'payload': 'premium_month'" in WEBAPP_SVC
+    # V3.43.1: the single-credit square became the peach pack ladder.
+    # V3.65.0: the pack tiles are built by _peach_pack_item (×100 peaches).
+    assert "_peach_pack_item('peach_pack_100', PEACH_PACK_100_STARS, PEACH_PACK_100_RUB, en)" in WEBAPP_SVC
+    assert "'id': 'premium'" in WEBAPP_SVC
+    assert "'payload': key," in WEBAPP_SVC
+    # both RU and EN titles exist
+    assert "f'{peach_num(credits)} персиков' if not en else f'{peach_num(credits)} peaches'" in WEBAPP_SVC
+    # the shop payload exposes the purchasable items
+    assert "'purchases': api_invoice_products(lang)" in WEBAPP_SVC
+
+
+def test_invoice_route_creates_links():
+    handler = MAIN[MAIN.index('async def _webapp_api_invoice('):MAIN.index('async def _webapp_api_select(')]
+    # initData HMAC gate before anything else
+    assert 'validate_init_data' in handler
+    assert "status=401" in handler
+    # only declared products, priced from the same constants
+    assert 'api_invoice_products(lang)' in handler
+    assert "status=400" in handler
+    # a Stars invoice link for the frontend to open with tg.openInvoice
+    assert 'await bot.create_invoice_link(' in handler
+    assert "currency='XTR'" in handler
+    assert "provider_token=''" in handler
+    assert 'LabeledPrice(' in handler
+
+
+def test_select_route_applies_chat_rules():
+    handler = MAIN[MAIN.index('async def _webapp_api_select('):MAIN.index('async def _start_web_server(')]
+    assert 'validate_init_data' in handler
+    # same gating as the in-chat character buttons
+    assert "card.status not in ('active', 'premium')" in handler
+    assert "card.status == 'premium' and not is_premium(telegram_id)" in handler
+    assert "status=403" in handler
+    assert 'set_user_character(telegram_id, character_id)' in handler
+    assert "metadata={'character_id': character_id, 'source': 'webapp'}" in handler
+    # the response re-renders the grid with the new selection
+    assert 'api_characters(telegram_id)' in handler
+
+
+def test_routes_registered():
+    routes = MAIN[MAIN.index('async def _start_web_server('):MAIN.index('async def main():')]
+    assert "add_post('/webapp/api/invoice', _webapp_api_invoice)" in routes
+    assert "add_post('/webapp/api/select', _webapp_api_select)" in routes
+
+
+def test_photo_pack_payment_flow():
+    # pre_checkout validates the amount, successful_payment grants +1 credit
+    # through the exact same record path as a chat photo purchase.
+    pre = MAIN[MAIN.index('@dp.pre_checkout_query()'):MAIN.index('@dp.message(F.successful_payment)')]
+    assert "elif payload=='photo_pack':" in pre
+    assert 'ok=amount==PHOTO_COST_STARS' in pre
+
+    pay = MAIN[MAIN.index('@dp.message(F.successful_payment)'):]
+    photo_pack = pay[pay.index("if payload == 'photo_pack':"):pay.index("if payload == 'premium_month':")]
+    assert "record_payment(message.from_user.id, 'photo', payment.total_amount, charge)" in photo_pack
+    assert "'source': 'webapp'" in photo_pack
+
+
+def test_characters_endpoint_knows_selection():
+    handler = MAIN[MAIN.index('async def _webapp_api_characters('):MAIN.index('async def _webapp_api_shop(')]
+    assert 'init_data' in handler
+    # V3.57.2: the read moved to a worker thread but still carries the selection
+    assert 'asyncio.to_thread(webapp_service.api_characters, telegram_id)' in handler
+
+
+def test_frontend_buys_and_selects():
+    # tg.openInvoice with the backend-issued link
+    assert 'tg.openInvoice(j.link' in INDEX
+    assert "/webapp/api/invoice?init_data=" in INDEX
+    assert "Object.assign({ product: productId }, extra || {})" in INDEX
+    # purchase squares driven by the backend purchase list — V3.43.0: the
+    # Come Closer pack grid; a tap opens the pay-method modal (Stars/SBP/crypto)
+    assert 'class="pack" data-pay="${esc(x.id)}"' in INDEX
+    assert 'openPay(b.dataset.pay)' in INDEX
+    assert "s.purchases || []" in INDEX
+    # character selection posts to the validated endpoint and re-renders
+    # V3.35.0: the card tap opens the dialog; selection lives on the chat header
+    assert "/webapp/api/select?init_data=" in INDEX
+    assert "JSON.stringify({ character_id: c.id })" in INDEX
+    assert 'openCharacter(el)' in INDEX
+    assert 'renderCharacters(j.characters)' in INDEX
+    # every dynamic string still goes through esc() or textContent
+    assert 'data-name="${esc(c.name)}"' in INDEX
+    assert 'el.textContent = text;' in INDEX
+    # post-payment refresh of all tabs
+    assert 'loadMe(); loadShop(); loadCharacters();' in INDEX
+
+
+def test_no_unescaped_backend_strings_in_templates():
+    # dynamic values inside template literals must be esc()-wrapped, or be one
+    # of the known numeric/int expressions (Stars prices, counters, percents)
+    numeric_ok = {
+        'p.stars', 'p.rub', 'premBuy.stars', 'premBuy.rub', 'premWeek.stars', 'premWeek.rub',
+        'credit.stars', 'i.stars', 'lvlPct', 'WIZ.stars', 'WIZ.rub', 'WIZ.usd',
+        # V3.43.0: pack-square Stars price — numeric from config constants.
+        'x.stars',
+        # V3.43.0: the channel-bonus L-functions interpolate the peach amount
+        # (a config integer) into their localized template.
+        'b',
+        # V3.55.5: the gift/promo L-functions interpolate the streak day number
+        # and the peach amount — both config integers (1..7, 1/3/5...).
+        'n',
+        's.free_tier.messages_per_day', 's.free_tier.photos_level_1_2',
+        's.free_tier.photos_level_3_6',
+        # V3.37.0: partner tab percent — always numeric from config, and the
+        # interpolated L-string is esc()-wrapped at the render site anyway.
+        'pct', 'min',
+    }
+    # These backend values sit outside esc() only because they flow into
+    # textContent (checkword line, V3.39.0 character-page title/meta), not
+    # innerHTML — so no HTML parsing ever happens on them.
+    text_content_ok = {'d.check_word', 'el.dataset.name', 'L.selected_toast', 'c.name', 'c.age'}
+    violations = []
+    for m in re.finditer(r'\$\{([^}]+)\}', INDEX):
+        expr = m.group(1).strip()
+        if (expr.startswith('esc(') or expr in numeric_ok or expr.startswith('L.')
+                or expr in text_content_ok or expr in (
+            'badge', 'viewsBadge', 'gdayBadge',
+            'c.selected ? `<span class="badge" style="left:8px;top:auto;bottom:8px;color:#e8447f">❤️</span>` : \'\'',
+            'heroBtn', 'heroWeekBtn', 'moRub', 'wkRub', 'creditRow', 'items', 'feats', 'price',
+            # V3.57.6: the shop free-tier chat label — every branch of it is
+            # esc()-wrapped where the fragment is built (L.unlim_title / msg_day).
+            'chatNote',
+            # V3.43.0: the pack grid + pay-modal row fragments — every inner
+            # backend field (id/emoji/title/rub) is esc()'d at build time.
+            'packs', "rows.join('')",
+            # V3.43.1: the pack discount badge fragment — esc()'d inside.
+            'packBadge(x)',
+            # V3.43.1: the living-tile media fragment — esc()'d inside.
+            'cardMedia(c)',
+            # V3.43.0: the auth-failure fragment — built from L constants and
+            # static markup only, no backend strings inside.
+            'authErrHtml()', 'msg',
+            'customBadge', 'opts', 'review', 't',
+            "role === 'user' ? 'user' : 'bot'",
+            "c.custom ? '1' : '0'",
+            "WIZ.params[step.key] === o.value ? ' sel' : ''",
+            "WIZ.name ? '' : 'disabled'",
+            # V3.36.0: the fiat formatter esc()-wraps its own fields internally
+            'fiat(credit)', 'fiat(i)', 'fiat(p)',
+            # V3.37.0: partner withdraw button state — a boolean ternary that
+            # can only ever be '' or 'disabled', never backend data.
+            "canWithdraw ? '' : 'disabled'",
+            # V3.37.0: locally-built HTML fragments (every inner field esc()'d).
+            'withdrawBtn', 'faq',
+            # V3.85.0: partner tab fragments — every inner field esc()'d at build.
+            'tierHtml', 'progHtml', 'topHtml', 'topRows', 'ladderHtml',
+            # V3.38.0: scenario-hook line under the character name — built
+            # from esc(c.hook) inside the fragment itself.
+            'hookLine',
+            # V3.38.0: the client's OWN Telegram initData, URL-encoded into an
+            # <img> query string — never backend output (same value already
+            # rides in every fetch URL).
+            "encodeURIComponent(tg.initData || '')",
+            # V3.38.0: locally-built «мои персонажи» fragment — every inner
+            # field (photo/name/id/open_chat) is esc()'d at build time.
+            'myCharsHtml',
+            # V3.39.0: chatBubble's locally-computed role class — the ternary
+            # can only ever be 'user' or 'bot', never backend data.
+            'cls',
+            # V3.39.0: chatBubble's locally-built media/text fragment — every
+            # inner value (content + media src) is esc()'d at build time.
+            'body',
+            # V3.39.0: character-page meta ternaries — one yields only the
+            # L.prem/L.active localization constants (into textContent), the
+            # other only the 'on'/'' thumbnail CSS class from a local map index.
+            "status === 'premium' ? L.prem : L.active",
+            "i === 0 ? 'on' : ''",
+            # V3.43.5: style-tile class ternaries — PIC_STYLE is local client
+            # state; the result can only ever be ' on' or ''.
+            "PIC_STYLE === 'anime' ? ' on' : ''",
+            "PIC_STYLE === 'realistic' ? ' on' : ''",
+            "PIC_STYLE === 'fantasy' ? ' on' : ''",
+            # V3.44.9: the wizard's pay fragments — priceLine is only peaches /
+            # Stars numbers and L-constants; payButtons is built from esc()'d
+            # L-functions and the local 'disabled' ternary, no backend strings.
+            'priceLine', 'payButtons',
+            # V3.43.5: the drawn style icons — static local SVG constants,
+            # no backend data inside.
+            'STYLE_ICONS.anime', 'STYLE_ICONS.realistic', 'STYLE_ICONS.fantasy',
+            # V3.43.5: the language-chip fragment (codes and names esc()'d
+            # inside) and its local class ternary.
+            'langChipsHtml', "code === LANG ? ' on' : ''",
+            # V3.44.0: leaderboard medal — local ternary result (emoji or number).
+            'medal',
+            # V3.44.11: the creator-cabinet row fragments — built outside the
+            # template from esc()'d fields and static L-constants only.
+            'stateBadge', 'pubBtn',
+            # V3.44.22: the created-date suffix — a toLocaleDateString() output
+            # derived from a parsed Date, no backend markup can survive it.
+            'when',
+            # V3.44.23: the custom-peach tile — 'stars' and 'rub' are local
+            # integer computations (n × per-unit constant), 'customTile' is
+            # an HTML fragment built from esc()'d L-constants and fields.
+            'stars', 'rub', 'customTile',
+            # V3.44.23: the crypto USD estimate — a local numeric computation
+            # on the Stars integer, no backend data can survive it.
+            '(stars * 0.02).toFixed(2)',
+            # V3.45.28 (whitelisted in V3.55.2): the tag-chip fragment — each
+            # chip is '#'+esc(t)+'</span>', so no raw backend text survives.
+            'tagChips',
+            # Pre-existing wizard span (surfaced once tagChips passed): 'has'
+            # is a local boolean, the result is '' or a static CSS suffix.
+            "has ? '' : ';display:none'",
+            # V3.55.3: the long-standing debt list, audited line-by-line and
+            # retired in one pass (all verified safe/local, matching this build).
+            # Studio + wizard + mission fragments — every inner backend field is
+            # esc()'d at build time, so nothing raw survives the interpolation.
+            'head', 'byGroup[g].map(_wizFieldHtml).join(\'\')',
+            'isPic ? \'\' : `<div class="langBox" id="vidPresetRow"><div class="langChips">${studioPresetChips()',
+            'reward', 'prog', 'cta', 'icon',
+            # Static/local class ternaries — the result can only ever be '' or a
+            # fixed CSS token, never backend data.
+            "isPic ? ' on' : ''", "isPic ? '' : ' on'",
+            "PIC_PRESET === k ? ' on' : ''", "PIC_PRESET ? '' : ' on'",
+            "action ? ' tappable' : ''", "it.unlocked ? '' : ' lock'",
+            # Preset key + its static emoji, both destructured from the local
+            # VID_PRESETS_UI constant table — no backend input at all.
+            'k', 'ic',
+            # Mission/achievement counters — integers from the backend, used as
+            # bare numbers and inside width:...% style values.
+            'j.pct', 'j.total', 'j.unlocked', 'it.progress[0]', 'it.progress[1]',
+            'Math.round(it.progress[0] / it.progress[1] * 100)',
+            # Notification badge cap — a local integer ternary.
+            "un > 9 ? '9+' : un",
+            # V3.55.5: the shop gift block — 'dots' is a static emoji cell
+            # fragment, 'btn' is built from esc()'d L-constants only.
+            'dots', 'btn',
+            # V3.57.0: the local blob: preview URL of a photo picked on the
+            # device — never backend data.
+            'URL.createObjectURL(file)',
+            # V3.66.0: shop/missions redesign — static class ternaries and
+            # local fragments whose every backend field is esc()'d inside.
+            "ME.gift_claimed_today ? '' : ' ready'", "best ? ' best' : ''",
+            "d.claimable ? ' ready' : ''", "d.claimed ? ' done' : ''", "d.done ? '' : ' tappable'",
+            'd.done ? \'\' : \' data-cta="chats"\'', "daily.map(dRow).join('')", 'right', 'span', "x.id === 'peach_pack_30' ? ' data-hot=\"1\"' : ''",
+            "planBtn(byId('premium'), L.plan_month, true)", "planBtn(byId('premium_week'), L.plan_week, false)",
+            'premCard',
+            # V3.67.0: Premium plan rows + perk tiles — local fragments, every
+            # field esc()'d where built.
+            "plans.map(planRow).join('')", 'tiles',
+            # V3.80.0: the «Пригласи друга» card — every backend field esc()'d inside.
+            'inviteCard',
+        ) or expr.startswith('`') or 'esc(' in expr or expr == "c.selected ? ' selected' : ''"):
+            continue
+        violations.append(expr)
+    # V3.55.2: report every violation at once — the old raise-on-first turned
+    # the whitelist upkeep into whack-a-mole.
+    assert not violations, f'unescaped template values in INDEX: {sorted(set(violations))}'
