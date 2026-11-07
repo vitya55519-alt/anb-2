@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>AnnaBot</title>
+<title>ИИ парень</title>
 <!-- V3.57.2: load-speed hints — warm the DNS/TLS for the SDK origin and start
      its download during HTML parsing instead of at the blocking <script> tag. -->
 <link rel="preconnect" href="https://telegram.org" crossorigin>
@@ -1112,7 +1112,7 @@ nav#bottomnav button[data-tab="pictures"] { display: none !important; }
   <style>@keyframes bootbeat{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}</style>
 </div>
 <header>
-  <div class="logo">AnnaBot</div>
+  <div class="logo">ИИ парень</div>
   <div class="chip" id="userchip">…</div>
 </header>
 <main>
@@ -1548,7 +1548,7 @@ const L_EN = {
   chars_title: 'Characters', loading: 'Loading…', chat_hints: ['Hi 😊', 'Tell me about yourself', 'Show me yourself 📸'], photo_save: '⬇️ Save photo', pa_save: '⬇️ Save', pa_anim: '🎬 Animate', pa_undress: '🔥 Undress', fork_romance: '❤️ I really like you', fork_passion: '🔥 I don\'t think of you as a friend 😏', fork_q: 'She is waiting for your answer: which path are you on?', fork_taken: 'The path is already chosen', fork_romance_on: '❤️ The path of romance', fork_passion_on: '🔥 The path of passion', fork_would: 'there:', path_map: 'Your road', path_romance: 'Romance', path_passion: 'Passion', path_romance_other: 'on the romance path', path_passion_other: 'on the passion path', lvl_pick_hint: 'Premium: tap any level and she talks that way right away', lvl_pick_reset: 'Back to the real level', lvl_pick_premium: 'With Premium you can pick any level 1–10', lvl_pick_done: 'level picked:', pa_wait_anim: 'animating the photo… this takes a couple of minutes 🎬', pa_wait_undress: 'undressing… 🙈', pa_failed: 'Did not work, nothing was charged — try again', pa_not_found: 'This photo can no longer be edited', video_limit: 'free animations are used up', photo_save_hint: 'Press and hold the photo to save it', load_failed: 'Could not load — check the connection', retry: 'Try again',
   chars_hint: 'Tap a card — the dialog opens right here. History is shared with the bot chat.',
   typing_now: 'typing…',
-  active: 'available', prem: 'Premium', soon: 'soon', selected: 'your girl', years: 'y.o.', girl_of_day: 'Girl of the day · free',
+  active: 'available', prem: 'Premium', soon: 'soon', selected: 'your guy', years: 'y.o.', girl_of_day: 'Guy of the day · free',
   // V3.55.2: the premium-characters section under the grid
   prem_chars_title: 'Premium characters', prem_chars_hint: 'Unlocked with a Premium subscription', prem_chars_owned: 'Open with your subscription',
   // V3.66.0: shop cards + missions with peaches
@@ -1597,7 +1597,7 @@ const L_EN = {
   p_hero_s: pct => `${pct}% of every purchase your friends make, forever — plus bonuses for every friend`,
   p_invited: 'friends', p_earned: 'earned', p_balance: 'balance',
   p_share: '📨 Send to a friend', p_copy: 'Copy',
-  p_share_text: 'AI girlfriends who text you first 💌 Join me here:',
+  p_share_text: 'AI boyfriends who text you first 💌 Join me here:',
   p_how: 'How it works',
   p_s1_t: 'Send your link', p_s1_s: 'To a friend, a group chat or your story',
   p_s2_t: 'Your friend chats with a girl', p_s2_s: (n, b) => `After ${n} messages you both get ${b} 🍑`,
@@ -1656,7 +1656,7 @@ const L_EN = {
   pay_stars_en: 'Telegram Stars — bought right in Telegram (Apple Pay / Google Pay / card)', pay_sbp_en: 'Crypto / Russian card',
   pay_crypto_pg: 'Crypto', pay_sbp_only: 'Russian card / SBP', hn_title: 'Honestly about us 💜', hn_sub: '30 seconds to know everything upfront',
   hn_can: 'What she can do',
-  hn_list: ['Chats 24/7 and remembers your name and what matters to you', 'Writes first, misses you and waits for you', 'Voice notes in her own voice', 'Photos and video circles', 'Dates and stories with a plot', '«Girl of the day»: a new heroine every day', 'Openly 18+: adults only, with Premium'],
+  hn_list: ['Chats 24/7 and remembers your name and what matters to you', 'Writes first, misses you and waits for you', 'Voice notes in his own voice', 'Voice calls right in the app', 'Dates and stories with a plot', '«Guy of the day»: a new hero every day', 'Openly 18+: adults only, with Premium'],
   hn_money: 'Free and Premium',
   hn_free: (f) => '💬 Free: ' + f.free_messages + ' messages a day' + (f.free_messages_later < f.free_messages ? ' (from day ' + f.later_from_day + ': ' + f.free_messages_later + ')' : '') + ' and ' + f.free_photos + ' photo',
   hn_prem: (price) => '💎 Premium from ' + price + ': one-time payment, no auto-renewal',
@@ -1824,7 +1824,7 @@ const L_RU = {
   prem_get: 'Получить', prem_extend: 'Продлить', prem_once: 'Разовый платёж, без автопродления',
   prem_gift_line: n => n + ' 🍑 в подарок сразу',
   prem_tiles: [['🔥', 'Всё откровенное', 'Фото в белье и без, «Раздеть»'], ['💌', 'Она не засыпает', 'Общение без лимита днём и ночью']],
-  prem_list: ['«Наедине» и 18+ картинки', 'Её голос — отвечает голосовыми', 'Все девушки, включая премиум', '2 оживления фото в день', 'Перезапуск историй', 'Больше памяти: помнит о тебе больше'],
+  prem_list: ['«Наедине» и 18+ картинки', 'Его голос — отвечает голосовыми', 'Все парни, включая премиум', '2 оживления фото в день', 'Перезапуск историй', 'Больше памяти: помнит о тебе больше'],
   peaches_title: 'Персики', peaches_word: 'персиков', pack_hot: 'хит', peach_photo_hint: n => '1 фото от него = ' + n + ' 🍑',
   free_peaches_row: 'Бесплатные персики каждый день — в «Миссиях»', price_list: 'Что сколько стоит',
   mis_today: 'Задания на сегодня', mis_reset: 'обновятся в 03:00', mis_achievements: 'Достижения',
@@ -1837,7 +1837,7 @@ const L_RU = {
   mis_ready: n => 'Готово — забирай ' + n + ' 🍑', mis_done_list: n => 'Выполнено (' + n + ')',
   mis_done_toast: (name, n) => '🏆 «' + name + '» выполнено — забери +' + n + ' 🍑 в «Миссиях»',
   shop_title: 'Магазин', missions_title: 'Миссии', month: '/ 30 дней', week: '7 дней', pay_hint: 'Нажми на пакет — оплата картой, СБП или звёздами Telegram.',
-  share_img: '📤 Поделиться', invite_cta: '🍑 Позвать друга', invite_got: 'Ссылка скопирована — делись, и вам обоим капнет 🍑', share_fail: 'Не удалось поделиться', gal_share_hint: 'Поделись фото — когда друг разговорится с ним, вам обоим капнет 🍑', save_img: '📥 Сохранить', save_ok: 'Фото отправлено в чат — перешли её другу',
+  share_img: '📤 Поделиться', invite_cta: '🍑 Позвать друга', invite_got: 'Ссылка скопирована — делись, и вам обоим капнет 🍑', share_fail: 'Не удалось поделиться', gal_share_hint: 'Поделись фото — когда друг разговорится с ним, вам обоим капнет 🍑', save_img: '📥 Сохранить', save_ok: 'Фото отправлено в чат — перешли его подруге',
     unlim_title: 'Безлимитные сообщения', unlim_sub: 'Первые часы после регистрации — текст бесплатно', unlim_left: 'осталось',
   free_tier: 'Бесплатный функционал', msg_day: 'сообщений в день', photos_day: 'фото в день',
   profile_title: 'Профиль', premium_on: 'Premium активен', premium_off: 'Бесплатный аккаунт',
@@ -1862,7 +1862,7 @@ const L_RU = {
   p_hero_s: pct => `${pct}% с каждой их покупки навсегда — и бонусы за каждого друга`,
   p_invited: 'друзей', p_earned: 'заработано', p_balance: 'на балансе',
   p_share: '📨 Отправить другу', p_copy: 'Копировать',
-  p_share_text: 'Тут ИИ-девушки, которые пишут первыми 💌 Заходи:',
+  p_share_text: 'Тут ИИ-парни, которые пишут первыми 💌 Заходи:',
   p_how: 'Как это работает',
   p_s1_t: 'Отправь ссылку', p_s1_s: 'Другу, в чат или в сторис',
   p_s2_t: 'Друг пишет парню', p_s2_s: (n, b) => `После ${n} сообщений вы оба получаете по ${b} 🍑`,
@@ -1921,9 +1921,9 @@ const L_RU = {
   pay_stars_en: 'Telegram Stars', pay_sbp_en: 'Карта / СБП / крипта',
   pay_crypto_pg: 'Криптовалюта', pay_sbp_only: 'Карта / СБП', hn_title: 'Честно о нас 💜', hn_sub: '30 секунд, чтобы знать всё заранее',
   hn_can: 'Что он умеет',
-  hn_list: ['Переписка 24/7, помнит твоё имя и важное о тебе', 'Пишет первой, скучает и ждёт тебя', 'Голосовые своим голосом', 'Фото и видео-кружки', 'Свидания и сюжеты с продолжением', '«Девушка дня»: новая героиня каждый день', 'Откровенно 18+: только для взрослых, в Premium'],
+  hn_list: ['Переписка 24/7, помнит твоё имя и важное о тебе', 'Пишет первым, скучает и ждёт тебя', 'Голосовые своим голосом', 'Звонки голосом прямо в приложении', 'Свидания и сюжеты с продолжением', '«Парень дня»: новый герой каждый день', 'Откровенно 18+: только для взрослых, в Premium'],
   hn_money: 'Бесплатно и Premium',
-  hn_free: (f) => '💬 Бесплатно: ' + f.free_messages + ' сообщений в день' + (f.free_messages_later < f.free_messages ? ' (с ' + f.later_from_day + '-го дня — ' + f.free_messages_later + ')' : '') + ' и ' + f.free_photos + ' фото',
+  hn_free: (f) => '💬 Бесплатно: ' + f.free_messages + ' сообщений в день' + (f.free_messages_later < f.free_messages ? ' (с ' + f.later_from_day + '-го дня — ' + f.free_messages_later + ')' : ''),
   hn_prem: (price) => '💎 Premium от ' + price + ': разовый платёж, без автопродления',
   fb_title: 'Будем рады вашим пожеланиям 💡', fb_sub: 'Что улучшить в боте? Ждём ваших предложений, читаем каждое',
   fb_ph: 'Твоё предложение или пожелание…', fb_send: 'Отправить', fb_done: 'Спасибо! Предложение ушло команде 💜', fb_err: 'Не получилось отправить, попробуй чуть позже',
@@ -2005,7 +2005,7 @@ const L_RU = {
       story_locked_fork: 'Откроется, когда вы выберете путь (3-й уровень)', story_locked_romance: 'Только на пути романтики', story_locked_passion: 'Только на пути страсти',
       story_locked_level: lvl => '🔒 Откроется на уровне близости ' + lvl, story_locked_tasks: n => '🔒 Ещё ' + n + ' заданий до открытия',
       story_done: 'Пройдено', story_canon: ' · твой путь', story_play: 'Играть', story_choose: 'Выбери, как будет',
-      story_result: 'Что произошло', story_reaction: 'Его реакция', story_axis_up: 'Путь сдвинулся к страсти', story_pts_passion: 'к страсти', story_pts_tender: 'к нежности', marital_lbl: '💍 Его семейное положение', marital_default: 'Как задумано', marital_single: 'Свободен', marital_boyfriend: 'Есть девушка', marital_married: 'Замужем', marital_divorced: 'В разводе', marital_open: 'Свободные отношения', marital_saved: 'Готово, теперь он будет общаться по-другому', marital_change: 'смена', marital_confirm: 'Поменять его семейное положение за', marital_no_peaches: 'Не хватает персиков — пополни в магазине', story_axis_down: 'Путь сдвинулся к нежности', story_axis_same: 'Путь остался равновесным',
+      story_result: 'Что произошло', story_reaction: 'Его реакция', story_axis_up: 'Путь сдвинулся к страсти', story_pts_passion: 'к страсти', story_pts_tender: 'к нежности', marital_lbl: '💍 Его семейное положение', marital_default: 'Как задумано', marital_single: 'Свободен', marital_boyfriend: 'Есть девушка', marital_married: 'Женат', marital_divorced: 'В разводе', marital_open: 'Свободные отношения', marital_saved: 'Готово, теперь он будет общаться по-другому', marital_change: 'смена', marital_confirm: 'Поменять его семейное положение за', marital_no_peaches: 'Не хватает персиков — пополни в магазине', story_axis_down: 'Путь сдвинулся к нежности', story_axis_same: 'Путь остался равновесным',
       story_thinking: 'Он представляет, как всё будет… 💭', story_photo_wait: '📸 кадр к этому моменту уже в пути…',
       story_beat: 'Через миг…', story_photo: '📸 Кадр к нашей истории', story_empty: 'Пока нет историй', story_hint: 'Твой выбор здесь двигает шкалу «Характер связи» на его карточке.',
       // V3.51.1: админ-лента того, что генерируют пользователи в Mini App.
@@ -2404,11 +2404,11 @@ document.getElementById('chanGo').textContent = L.chan_go;
 document.getElementById('chanCheck').textContent = L.chan_check;
 // V3.43.5: bottom-nav labels for every supported interface language.
 const NAV_LABELS = {
-  ru: ['Девушки','Чаты','Картинки','Магазин','Миссии','Партнёрка','Профиль'],
+  ru: ['Парни','Чаты','Картинки','Магазин','Миссии','Партнёрка','Профиль'],
   en: ['Characters','Chats','Pictures','Shop','Missions','Partners','Profile'],
-  es: ['Chicas','Chats','Imágenes','Tienda','Misiones','Socios','Perfil'],
-  it: ['Ragazze','Chat','Immagini','Negozio','Missioni','Partner','Profilo'],
-  fr: ['Filles','Tchats','Images','Boutique','Missions','Partenaires','Profil'],
+  es: ['Chicos','Chats','Imágenes','Tienda','Misiones','Socios','Perfil'],
+  it: ['Ragazzi','Chat','Immagini','Negozio','Missioni','Partner','Profilo'],
+  fr: ['Garçons','Tchats','Images','Boutique','Missions','Partenaires','Profil'],
   zh: ['女孩','聊天','图片','商店','任务','合伙人','我的'],
   ja: ['女の子','チャット','画像','ショップ','ミッション','パートナー','プロフィール'],
 };
@@ -7034,7 +7034,7 @@ document.getElementById('achBack').addEventListener('click', () => {
 // back to a plain invite share. All links carry ?start=src_share_<uid> so a
 // friend who installs is attributed to this channel AND credits the sharer.
 function _inviteLink() { return (ME && ME.invite) || ''; }
-function _shareText() { return L.gal_share_hint || 'AnnaBot'; }
+function _shareText() { return L.gal_share_hint || 'ИИ парень'; }
 function _fallbackShare() {
   const invite = _inviteLink();
   if (invite && typeof tg.openTelegramLink === 'function') {
@@ -7076,7 +7076,7 @@ async function sharePhotoImage(shareUrl, imageId) {
     if (!r.ok) throw new Error('http ' + r.status);
     const blob = await r.blob();
     const file = new File([blob], 'annabot.jpg', { type: blob.type || 'image/jpeg' });
-    const ok = await _shareAny({ title: 'AnnaBot', text: _shareText(), files: [file], url: _inviteLink() || undefined });
+    const ok = await _shareAny({ title: 'ИИ парень', text: _shareText(), files: [file], url: _inviteLink() || undefined });
     if (!ok) toast(L.share_fail);
   } catch (e) {
     if (!_fallbackShare()) toast(L.share_fail);
@@ -7085,7 +7085,7 @@ async function sharePhotoImage(shareUrl, imageId) {
 // The referral CTA: share just the invite link (no image).
 async function inviteFriends() {
   const invite = _inviteLink();
-  const ok = await _shareAny({ title: 'AnnaBot', text: _shareText(), url: invite || undefined });
+  const ok = await _shareAny({ title: 'ИИ парень', text: _shareText(), url: invite || undefined });
   if (!ok) toast(L.share_fail);
 }
 // V3.47.1: reliable 'share a real photo' on every client — the bot posts the
