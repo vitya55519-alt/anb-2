@@ -29,7 +29,7 @@ import re
 ENABLED = os.getenv('VOICE_HUMANIZE_ENABLED', 'true').strip().lower() not in ('0', 'false', 'no', 'off')
 MAX_TAGS = 3
 
-SOFT_CHARACTERS = frozenset({'agata_01', 'maria_01', 'lera_01', 'liza_01', 'polina_01', 'kristina_01'})
+SOFT_CHARACTERS = frozenset({'minjun_01', 'maksim_01'})
 _TENDER = re.compile(r'(скучаю|обнима|целую|нежн|люблю|мой хороший|мой милый|котик|засыпа|спокойной ночи|'
                      r'хочу тебя|прижм|шепч|рядом с тобой|miss you|kiss|hug|love you|good ?night|whisper)', re.I)
 _WHISPER_ACTION = re.compile(r'\*[^*]{0,40}(шепч|шёпот|whisper)[^*]{0,40}\*', re.I)

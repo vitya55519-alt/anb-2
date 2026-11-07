@@ -74,6 +74,6 @@ def mark_sent(telegram_id: int, character_id: str) -> None:
     with SessionLocal() as s:
         uid = _uid(s, telegram_id)
         if uid:
-            s.add(ProductEvent(user_id=uid, character_id=character_id or 'anna_01', event_name=SENT,
+            s.add(ProductEvent(user_id=uid, character_id=character_id or 'mark_01', event_name=SENT,
                                created_at=_now()))
             s.commit()

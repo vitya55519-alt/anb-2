@@ -235,7 +235,7 @@ CARD_GIRL_DIRTY_LINE = (
 # уровне, доступно для всех». Explicit from level 1 for every confirmed adult —
 # an exception to the V3.90 Premium gate in chat. Her nude/undress media stay
 # Premium-only like everyone's.
-DIRTY_FROM_START = frozenset({'agata_01'})
+DIRTY_FROM_START: frozenset[str] = frozenset()
 
 TENDER_DIRTY_LINE = (
     'ХАРАКТЕР: она нежная и очень пошлая одновременно — с самого первого сообщения, на любом уровне, '

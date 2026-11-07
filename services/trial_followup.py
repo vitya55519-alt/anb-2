@@ -74,7 +74,7 @@ def candidates(now: datetime | None = None) -> list[tuple[int, int, str, str]]:
 
 def mark(uid: int, stage: str, character_id: str) -> None:
     with SessionLocal() as s:
-        s.add(ProductEvent(user_id=uid, character_id=character_id or 'anna_01',
+        s.add(ProductEvent(user_id=uid, character_id=character_id or 'mark_01',
                            event_name=EVENTS[stage], created_at=_now()))
         s.commit()
 

@@ -60,7 +60,7 @@ def candidates(now: datetime | None = None) -> list[tuple[int, int, str]]:
 def mark(uid: int, stage: str, character_id: str) -> None:
     import json
     with SessionLocal() as s:
-        s.add(ProductEvent(user_id=uid, character_id=character_id or 'anna_01', event_name=EVENT,
+        s.add(ProductEvent(user_id=uid, character_id=character_id or 'mark_01', event_name=EVENT,
                            metadata_json=json.dumps({'stage': stage}), created_at=_now()))
         s.commit()
 
