@@ -13317,6 +13317,35 @@ async def _app_chat_missions(telegram_id: int, voice: bool = False, text: str | 
     return {'missions_done': done} if done else {}
 
 
+_VOICE_PREVIEW_CACHE: dict[str, bytes] = {}
+_VOICE_PREVIEW_LOCK = asyncio.Lock()
+
+
+async def _webapp_api_voice_preview(request: web.Request) -> web.Response:
+    """anb-2: «🔊» on a hero card in the app plays a short line in his voice.
+    Only the built-in heroes, rendered once per process and kept in memory,
+    so the whole storefront costs six TTS calls per deploy."""
+    from services.voice_samples import VOICE_SAMPLES
+    character_id = request.match_info.get('character_id', '')
+    samples = VOICE_SAMPLES.get(character_id)
+    if not samples:
+        return web.json_response({'ok': False, 'error': 'not_found'}, status=404)
+    audio = _VOICE_PREVIEW_CACHE.get(character_id)
+    if audio is None:
+        async with _VOICE_PREVIEW_LOCK:
+            audio = _VOICE_PREVIEW_CACHE.get(character_id)
+            if audio is None:
+                line = samples[0][1]
+                try:
+                    audio = await synthesize_bytes(line, character_id=character_id)
+                except Exception:
+                    logger.exception('voice preview failed character=%s', character_id)
+                    return web.json_response({'ok': False, 'error': 'tts'}, status=502)
+                _VOICE_PREVIEW_CACHE[character_id] = audio
+    return web.Response(body=audio, content_type='audio/ogg',
+                        headers={'Cache-Control': 'public, max-age=86400'})
+
+
 async def _webapp_api_chat_speak(request: web.Request) -> web.Response:
     """V3.63.5: tap her message in the app chat → «🔊 Озвучить» → she says it
     in her own voice. A Premium perk (admins bypass); non-Premium gets 403
@@ -15825,6 +15854,7 @@ async def _start_web_server() -> None:
     app.router.add_post('/webapp/api/chat', _webapp_api_chat_send)
     app.router.add_post('/webapp/api/chat/voice', _webapp_api_chat_voice)
     app.router.add_post('/webapp/api/chat/speak', _webapp_api_chat_speak)
+    app.router.add_get('/webapp/api/voice-preview/{character_id}', _webapp_api_voice_preview)
     app.router.add_post('/webapp/api/chat/photo', _webapp_api_chat_photo)
     app.router.add_post('/webapp/api/chat/persona', _webapp_api_chat_persona)
     app.router.add_post('/webapp/api/chat/marital', _webapp_api_chat_marital)
